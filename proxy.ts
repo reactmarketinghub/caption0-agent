@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth, isAuthConfigured } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+// TEMP: /api/debug is public while we track down the missing-env-var issue.
+// Remove "/api/debug" once that's resolved and the route below is deleted.
+const PUBLIC_PATHS = ["/login", "/api/auth", "/api/debug"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
