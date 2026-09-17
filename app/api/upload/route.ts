@@ -3,9 +3,15 @@ import { NextResponse } from "next/server";
 
 /**
  * Issues client-upload tokens for Vercel Blob so the browser can upload
- * original creatives directly (Vercel functions cap request bodies at ~4.5MB).
- * These originals are kept only for a short audit trail; a daily cron job
- * (see /api/cron/cleanup-blobs) deletes anything older than 24h.
+ * files directly (Vercel functions cap request bodies at ~4.5MB).
+ *
+ * Two upload contexts, distinguished by pathname prefix:
+ * - "uploads/..."     original creatives - short audit trail only, restricted
+ *                      to image/video, auto-deleted after 24h by the daily
+ *                      cron (see /api/cron/cleanup-blobs, which only targets
+ *                      this prefix).
+ * - "brand-kits/..."  persistent client brand kit files (logos, guideline
+ *                      docs, fonts, etc.) - any file type, never auto-deleted.
  */
 export async function POST(request: Request) {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
@@ -21,17 +27,25 @@ export async function POST(request: Request) {
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async () => ({
-        allowedContentTypes: [
-          "image/jpeg",
-          "image/png",
-          "image/webp",
-          "video/mp4",
-          "video/quicktime",
-        ],
-        addRandomSuffix: true,
-        tokenPayload: JSON.stringify({ uploadedAt: new Date().toISOString() }),
-      }),
+      onBeforeGenerateToken: async (pathname) => {
+        if (pathname.startsWith("brand-kits/")) {
+          return {
+            addRandomSuffix: true,
+            tokenPayload: JSON.stringify({ uploadedAt: new Date().toISOString() }),
+          };
+        }
+        return {
+          allowedContentTypes: [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "video/mp4",
+            "video/quicktime",
+          ],
+          addRandomSuffix: true,
+          tokenPayload: JSON.stringify({ uploadedAt: new Date().toISOString() }),
+        };
+      },
     });
     return NextResponse.json(jsonResponse);
   } catch (err) {

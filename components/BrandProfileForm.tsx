@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BrandKitSection } from "@/components/BrandKitSection";
 import type { BrandDocParseResult, BrandProfile, BrandProfileInput } from "@/lib/schemas";
 
 function toLines(value: string): string[] {
@@ -173,6 +174,8 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+      {profile && <BrandKitSection clientId={profile.id} initialFiles={profile.brandKitFiles} />}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Import from a brand voice doc</CardTitle>

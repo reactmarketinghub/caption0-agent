@@ -97,6 +97,17 @@ voice as draft profile" button. This creates a profile with `isDraft: true`
 (shown as "Draft" in the admin list) so someone reviews/fills it in properly
 before it's treated as a real brand voice.
 
+### Brand kit files
+
+Once a client is saved, its edit page (`/admin/clients/[id]`) shows a
+**Brand kit** section for uploading reference files (logos, guideline docs,
+fonts - any file type). These are stored persistently in Vercel Blob under
+`brand-kits/{clientId}/...` (a different prefix than the ephemeral
+`uploads/...` creatives, so the 24h cleanup cron never touches them) and are
+purely for the team's reference - **they are never sent to Claude**. A new
+(unsaved) client has no id yet, so this section only appears once the
+profile has been created at least once.
+
 ## How to update platform rules
 
 Edit `config/platforms.ts` only - nothing else needs to change. Each entry

@@ -22,6 +22,7 @@ export async function POST(req: Request) {
   const profile: BrandProfile = {
     ...parsed.data,
     id: randomUUID(),
+    brandKitFiles: [],
     createdAt: now,
     updatedAt: now,
   };

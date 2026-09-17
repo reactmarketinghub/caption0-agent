@@ -2,6 +2,17 @@ import { z } from "zod";
 
 export const platformIdSchema = z.enum(["instagram", "tiktok", "facebook", "linkedin"]);
 
+/** One file in a client's brand kit (logo, guidelines doc, fonts, etc. - any type). */
+export const brandKitFileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  size: z.number().int().nonnegative(),
+  contentType: z.string(),
+  uploadedAt: z.string(),
+});
+export type BrandKitFile = z.infer<typeof brandKitFileSchema>;
+
 /** A client's brand voice profile (Mode A). */
 export const brandProfileSchema = z.object({
   id: z.string(),
@@ -16,16 +27,19 @@ export const brandProfileSchema = z.object({
   exampleCaptions: z.array(z.string()).min(0).max(10).default([]),
   /** True when this profile was seeded from a Mode B "inferred voice" and not yet reviewed. */
   isDraft: z.boolean().default(false),
+  /** Reference-only files (logos, guidelines, fonts) - not sent to Claude, managed via /api/clients/[id]/brand-kit. */
+  brandKitFiles: z.array(brandKitFileSchema).default([]),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 export type BrandProfile = z.infer<typeof brandProfileSchema>;
 
-/** Fields the admin form edits; server assigns id/timestamps. */
+/** Fields the admin form edits; server assigns id/timestamps. Brand kit files are managed separately. */
 export const brandProfileInputSchema = brandProfileSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  brandKitFiles: true,
 });
 export type BrandProfileInput = z.infer<typeof brandProfileInputSchema>;
 
