@@ -4,6 +4,8 @@ import { generateStructured } from "@/lib/claudeGenerate";
 import { buildBrandDocParseSystemPrompt } from "@/lib/prompts";
 import { extractTextFromFile } from "@/lib/extractDocText";
 
+export const maxDuration = 60;
+
 const MAX_DOC_CHARS = 40000;
 
 export async function POST(req: Request) {

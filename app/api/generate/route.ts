@@ -5,6 +5,11 @@ import { buildSystemPrompt } from "@/lib/prompts";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
 import { getCurrentUserEmail } from "@/lib/auth";
 
+// Vision + multi-platform generation (plus a possible retry) can take a
+// while; without this, Vercel's default function timeout can kill the
+// request before Claude responds.
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   let userEmail: string;
   try {

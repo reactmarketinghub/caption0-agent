@@ -6,6 +6,8 @@ import { buildSystemPrompt } from "@/lib/prompts";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
 import { getCurrentUserEmail } from "@/lib/auth";
 
+export const maxDuration = 60;
+
 const refineResponseSchema = z.object({ variant: captionVariantSchema });
 
 const INSTRUCTION_TEXT: Record<string, string> = {
