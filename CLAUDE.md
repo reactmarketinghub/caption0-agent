@@ -133,6 +133,35 @@ See the stage-by-stage test notes given alongside this build for exactly
 what to click through at each level of environment setup (API key only, +
 KV, + Blob, + Google OAuth).
 
+## Deploying to Vercel
+
+1. **Import the repo**: [vercel.com/new](https://vercel.com/new) -> import
+   `reactmarketinghub/caption0-agent`. It's a standard Next.js app, no build
+   config changes needed.
+2. **Provision storage** (Project -> Storage tab):
+   - **Blob**: Create Database -> Blob. Copy the token into
+     `BLOB_READ_WRITE_TOKEN`.
+   - **KV**: Create Database -> Upstash Redis (Vercel KV itself is
+     deprecated). Copy `KV_REST_API_URL` / `KV_REST_API_TOKEN` from its
+     Quickstart tab.
+3. **Set up Google OAuth** (Google Cloud Console -> APIs & Services ->
+   Credentials -> OAuth client ID, type "Web application"):
+   - Authorized redirect URI: `https://<your-vercel-domain>/api/auth/callback/google`
+   - Copy the client ID/secret into `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`.
+   - Set `ALLOWED_EMAIL_DOMAIN` to your company's domain.
+   - Generate `AUTH_SECRET` with `npx auth secret` (or `openssl rand -base64 32`).
+4. **Set all env vars** from `.env.example` in Project Settings ->
+   Environment Variables, plus `ANTHROPIC_API_KEY` and (optionally)
+   `CRON_SECRET` (any random string - Vercel automatically sends it as the
+   cron job's Bearer token once it's set).
+5. **Deploy.** The Blob-cleanup cron in `vercel.json` runs automatically
+   once deployed - no extra setup. Note it's scheduled once/day (not
+   hourly) because Vercel's Hobby plan rejects more-frequent cron
+   schedules; see the comment in `app/api/cron/cleanup-blobs/route.ts` if
+   you're on Pro+ and want tighter cleanup.
+6. Redeploy (or just push a commit) any time an env var changes - Vercel
+   only picks up new env vars on the next build/deploy.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

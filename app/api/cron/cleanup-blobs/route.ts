@@ -7,6 +7,11 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000;
  * Deletes uploaded originals from Vercel Blob older than 24h. Triggered by
  * the Vercel Cron job in vercel.json (Vercel sends
  * `Authorization: Bearer $CRON_SECRET` automatically when CRON_SECRET is set).
+ *
+ * Runs once/day (03:00 UTC) because Vercel's Hobby plan rejects cron
+ * schedules more frequent than daily - so a blob can live up to ~48h in the
+ * worst case, not a strict 24h. On a Pro+ plan you can tighten
+ * vercel.json's schedule (e.g. hourly) for closer-to-24h cleanup.
  */
 export async function GET(req: Request) {
   if (process.env.CRON_SECRET) {
