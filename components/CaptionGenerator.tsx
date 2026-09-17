@@ -84,7 +84,7 @@ export function CaptionGenerator() {
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
       <div>
         <h1 className="text-2xl font-semibold">Caption Generator</h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           Drop a creative, pick a client, get ready-to-post captions.
         </p>
       </div>
@@ -121,7 +121,7 @@ export function CaptionGenerator() {
           )}
 
           {creativeType === "video" && (
-            <div className="flex items-center gap-2 text-sm text-zinc-500">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Film className="h-4 w-4" />
               <span>{assets.length} frames extracted (no audio is sent or analyzed).</span>
             </div>

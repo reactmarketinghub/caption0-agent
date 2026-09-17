@@ -61,7 +61,7 @@ export function InferredVoiceNote({ inferredVoice, onSavedDraft }: InferredVoice
       <AlertTitle>Inferred voice</AlertTitle>
       <AlertDescription className="space-y-3">
         <p>{inferredVoice}</p>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           No brand profile was used - Claude guessed this tone from the creative. Sanity-check it
           before posting.
         </p>

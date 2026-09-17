@@ -178,7 +178,7 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
           <CardTitle className="text-base">Import from a brand voice doc</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             Upload a PDF/DOCX/text file, or paste text, and Claude will fill in the fields below
             for you to review before saving.
           </p>

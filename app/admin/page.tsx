@@ -23,13 +23,13 @@ export default async function UsagePage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm text-zinc-500">This month&apos;s generations</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">This month&apos;s generations</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">{report.currentMonth.generations}</CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm text-zinc-500">Tokens this month</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">Tokens this month</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
             {(report.currentMonth.inputTokens + report.currentMonth.outputTokens).toLocaleString()}
@@ -37,7 +37,7 @@ export default async function UsagePage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm text-zinc-500">Estimated cost this month</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">Estimated cost this month</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
             {formatUsd(report.currentMonth.estimatedCostUsd)}
@@ -51,7 +51,7 @@ export default async function UsagePage() {
         </CardHeader>
         <CardContent>
           <table className="w-full text-sm">
-            <thead className="text-left text-zinc-500">
+            <thead className="text-left text-muted-foreground">
               <tr>
                 <th className="py-1 font-normal">Month</th>
                 <th className="py-1 font-normal">Generations</th>
@@ -70,7 +70,7 @@ export default async function UsagePage() {
               ))}
               {report.byMonth.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-3 text-zinc-500">
+                  <td colSpan={4} className="py-3 text-muted-foreground">
                     No generations logged yet.
                   </td>
                 </tr>
@@ -89,12 +89,12 @@ export default async function UsagePage() {
             {report.byUser.map((u) => (
               <div key={u.userEmail} className="flex justify-between">
                 <span>{u.userEmail}</span>
-                <span className="text-zinc-500">
+                <span className="text-muted-foreground">
                   {u.generations} · {formatUsd(u.estimatedCostUsd)}
                 </span>
               </div>
             ))}
-            {report.byUser.length === 0 && <p className="text-zinc-500">No data yet.</p>}
+            {report.byUser.length === 0 && <p className="text-muted-foreground">No data yet.</p>}
           </CardContent>
         </Card>
         <Card>
@@ -105,12 +105,12 @@ export default async function UsagePage() {
             {report.byClient.map((c) => (
               <div key={c.clientName} className="flex justify-between">
                 <span>{c.clientName}</span>
-                <span className="text-zinc-500">
+                <span className="text-muted-foreground">
                   {c.generations} · {formatUsd(c.estimatedCostUsd)}
                 </span>
               </div>
             ))}
-            {report.byClient.length === 0 && <p className="text-zinc-500">No data yet.</p>}
+            {report.byClient.length === 0 && <p className="text-muted-foreground">No data yet.</p>}
           </CardContent>
         </Card>
       </div>

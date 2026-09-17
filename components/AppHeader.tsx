@@ -6,16 +6,30 @@ export async function AppHeader() {
   const session = isAuthConfigured() ? await auth() : null;
 
   return (
-    <header className="flex items-center justify-between border-b px-4 py-3">
-      <nav className="flex items-center gap-4 text-sm font-medium">
-        <Link href="/">Generator</Link>
-        <Link href="/admin/clients" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
-          Clients
+    <header className="flex items-center justify-between border-b bg-card px-4 py-3">
+      <div className="flex items-center gap-6">
+        <Link href="/" className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className="h-6 w-6 rounded-md bg-gradient-to-br from-primary to-brand-gold"
+          />
+          <span className="text-[15px] font-bold tracking-tight">Caption Generator</span>
         </Link>
-        <Link href="/admin" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
-          Usage
-        </Link>
-      </nav>
+        <nav className="flex items-center gap-4 text-sm font-medium">
+          <Link href="/" className="text-foreground/70 transition-colors hover:text-primary">
+            Generator
+          </Link>
+          <Link
+            href="/admin/clients"
+            className="text-foreground/70 transition-colors hover:text-primary"
+          >
+            Clients
+          </Link>
+          <Link href="/admin" className="text-foreground/70 transition-colors hover:text-primary">
+            Usage
+          </Link>
+        </nav>
+      </div>
       {session?.user && (
         <form
           action={async () => {
@@ -23,7 +37,7 @@ export async function AppHeader() {
             await signOut({ redirectTo: "/login" });
           }}
         >
-          <div className="flex items-center gap-3 text-sm text-zinc-500">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span>{session.user.email}</span>
             <Button type="submit" variant="ghost" size="sm">
               Sign out

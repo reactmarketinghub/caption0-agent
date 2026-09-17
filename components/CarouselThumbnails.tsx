@@ -43,7 +43,7 @@ function Thumbnail({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`relative flex-shrink-0 ${isDragging ? "z-10 opacity-70" : ""}`}
     >
-      <div className="relative h-28 w-28 overflow-hidden rounded-lg border bg-zinc-100 dark:bg-zinc-900">
+      <div className="relative h-28 w-28 overflow-hidden rounded-lg border bg-muted">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={asset.dataUrl} alt={asset.name} className="h-full w-full object-cover" />
         <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white">
@@ -84,7 +84,7 @@ export function CarouselThumbnails({ assets, onReorder, onRemove }: CarouselThum
 
   return (
     <div>
-      <p className="mb-2 text-sm text-zinc-500">
+      <p className="mb-2 text-sm text-muted-foreground">
         Drag thumbnails to set the story order (slide 1 first).
       </p>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

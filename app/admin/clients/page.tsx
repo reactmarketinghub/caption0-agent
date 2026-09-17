@@ -24,14 +24,14 @@ export default async function ClientsListPage() {
       )}
 
       {clients.length === 0 ? (
-        <p className="text-sm text-zinc-500">No clients yet.</p>
+        <p className="text-sm text-muted-foreground">No clients yet.</p>
       ) : (
         <ul className="divide-y rounded-lg border">
           {clients.map((c) => (
             <li key={c.id} className="flex items-center justify-between p-4">
               <div>
                 <p className="font-medium">{c.clientName}</p>
-                <p className="line-clamp-1 text-sm text-zinc-500">{c.toneOfVoice}</p>
+                <p className="line-clamp-1 text-sm text-muted-foreground">{c.toneOfVoice}</p>
               </div>
               <div className="flex items-center gap-2">
                 {c.isDraft && <Badge variant="secondary">Draft</Badge>}

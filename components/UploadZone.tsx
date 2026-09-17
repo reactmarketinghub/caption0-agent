@@ -114,21 +114,21 @@ export function UploadZone({ onLoaded, disabled }: UploadZoneProps) {
         }}
         className={cn(
           "flex min-h-48 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-colors",
-          isDragging ? "border-primary bg-primary/5" : "border-zinc-300 dark:border-zinc-700",
+          isDragging ? "border-primary bg-primary/5" : "border-input",
           disabled && "pointer-events-none opacity-50",
         )}
       >
         {isProcessing ? (
           <>
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-            <p className="text-sm text-zinc-500">Processing creative...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Processing creative...</p>
           </>
         ) : (
           <>
-            <UploadCloud className="h-8 w-8 text-zinc-400" />
+            <UploadCloud className="h-8 w-8 text-muted-foreground" />
             <div>
               <p className="font-medium">Drag & drop a creative, or click to browse</p>
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 One image (static) · multiple images (carousel) · one MP4/MOV (video)
               </p>
             </div>
