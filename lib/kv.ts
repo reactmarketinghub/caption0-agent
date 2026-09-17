@@ -1,15 +1,53 @@
-import { kv } from "@vercel/kv";
+import { createClient, type VercelKV } from "@vercel/kv";
 import type { BrandProfile } from "./schemas";
 
 /**
  * Thin wrapper around Vercel KV (Upstash Redis under the hood). All calls are
- * guarded so the app degrades gracefully in local dev when KV env vars
- * (KV_REST_API_URL / KV_REST_API_TOKEN) aren't configured yet: profile
- * features just act "empty" instead of crashing the request.
+ * guarded so the app degrades gracefully in local dev when KV isn't
+ * configured yet: profile features just act "empty" instead of crashing.
+ *
+ * Vercel's "Connect Project" flow for a Marketplace Upstash store can apply a
+ * custom Environment Variable Prefix (e.g. connecting with prefix "CLIENTTAB"
+ * produces CLIENTTAB_KV_REST_API_URL / CLIENTTAB_KV_REST_API_TOKEN instead of
+ * the bare names). Rather than depend on no prefix being set, we scan for
+ * whichever *_KV_REST_API_URL / *_KV_REST_API_TOKEN pair exists.
  */
 
+interface KvCredentials {
+  url: string;
+  token: string;
+}
+
+function resolveKvCredentials(): KvCredentials | null {
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    return { url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN };
+  }
+  const urlKey = Object.keys(process.env).find((k) => k.endsWith("_KV_REST_API_URL"));
+  if (urlKey) {
+    const prefix = urlKey.slice(0, -"_KV_REST_API_URL".length);
+    const url = process.env[urlKey];
+    const token = process.env[`${prefix}_KV_REST_API_TOKEN`];
+    if (url && token) return { url, token };
+  }
+  return null;
+}
+
+let cachedClient: VercelKV | null = null;
+let cachedCredentialsKey: string | null = null;
+
+/** Returns a working KV client, or null if nothing is configured. */
+function getKv(): VercelKV | null {
+  const creds = resolveKvCredentials();
+  if (!creds) return null;
+  const credentialsKey = `${creds.url}:${creds.token}`;
+  if (cachedClient && cachedCredentialsKey === credentialsKey) return cachedClient;
+  cachedClient = createClient(creds);
+  cachedCredentialsKey = credentialsKey;
+  return cachedClient;
+}
+
 function kvConfigured(): boolean {
-  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return resolveKvCredentials() !== null;
 }
 
 const PROFILE_KEY = (id: string) => `profile:${id}`;
@@ -19,7 +57,8 @@ const GENERATION_LOG_KEY = "logs:generations";
 const GENERATION_LOG_MAX_ENTRIES = 20000;
 
 export async function getBrandProfile(id: string): Promise<BrandProfile | null> {
-  if (!kvConfigured() || !id) return null;
+  const kv = getKv();
+  if (!kv || !id) return null;
   try {
     const profile = await kv.get<BrandProfile>(PROFILE_KEY(id));
     return profile ?? null;
@@ -30,7 +69,8 @@ export async function getBrandProfile(id: string): Promise<BrandProfile | null> 
 }
 
 export async function listBrandProfiles(): Promise<BrandProfile[]> {
-  if (!kvConfigured()) return [];
+  const kv = getKv();
+  if (!kv) return [];
   try {
     const ids = await kv.smembers(PROFILE_INDEX_KEY);
     if (!ids.length) return [];
@@ -45,9 +85,10 @@ export async function listBrandProfiles(): Promise<BrandProfile[]> {
 }
 
 export async function saveBrandProfile(profile: BrandProfile): Promise<void> {
-  if (!kvConfigured()) {
+  const kv = getKv();
+  if (!kv) {
     throw new Error(
-      "Vercel KV is not configured (KV_REST_API_URL / KV_REST_API_TOKEN missing). Brand profiles can't be saved until KV is connected.",
+      "Vercel KV is not configured. Brand profiles can't be saved until a KV/Redis store is connected.",
     );
   }
   await kv.set(PROFILE_KEY(profile.id), profile);
@@ -55,7 +96,8 @@ export async function saveBrandProfile(profile: BrandProfile): Promise<void> {
 }
 
 export async function deleteBrandProfile(id: string): Promise<void> {
-  if (!kvConfigured()) return;
+  const kv = getKv();
+  if (!kv) return;
   await kv.del(PROFILE_KEY(id));
   await kv.srem(PROFILE_INDEX_KEY, id);
 }
@@ -71,7 +113,8 @@ export async function checkAndConsumeRateLimit(
   userId: string,
   limit = 30,
 ): Promise<RateLimitResult> {
-  if (!kvConfigured()) return { allowed: true, remaining: limit, limit };
+  const kv = getKv();
+  if (!kv) return { allowed: true, remaining: limit, limit };
   try {
     const windowBucket = Math.floor(Date.now() / 1000 / RATE_LIMIT_WINDOW_SECONDS);
     const key = `ratelimit:${userId}:${windowBucket}`;
@@ -98,7 +141,8 @@ export interface GenerationLogEntry {
 }
 
 export async function logGeneration(entry: GenerationLogEntry): Promise<void> {
-  if (!kvConfigured()) return;
+  const kv = getKv();
+  if (!kv) return;
   try {
     await kv.lpush(GENERATION_LOG_KEY, JSON.stringify(entry));
     await kv.ltrim(GENERATION_LOG_KEY, 0, GENERATION_LOG_MAX_ENTRIES - 1);
@@ -108,7 +152,8 @@ export async function logGeneration(entry: GenerationLogEntry): Promise<void> {
 }
 
 export async function listGenerationLogs(limit = GENERATION_LOG_MAX_ENTRIES): Promise<GenerationLogEntry[]> {
-  if (!kvConfigured()) return [];
+  const kv = getKv();
+  if (!kv) return [];
   try {
     const raw = await kv.lrange(GENERATION_LOG_KEY, 0, limit - 1);
     return raw
