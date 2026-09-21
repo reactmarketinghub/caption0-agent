@@ -25,7 +25,9 @@ export default async function LoginPage({
           className="mx-auto mb-5 h-8 w-auto dark:invert"
           priority
         />
-        <h1 className="mb-1 text-xl font-bold tracking-tight">Caption Generator</h1>
+        <h1 className="mb-1 text-xl font-bold tracking-tight">
+          Caption <span className="font-serif font-normal italic">Generator</span>
+        </h1>
         <p className="mb-6 text-sm text-muted-foreground">
           Sign in with your Re:Act Google account to continue.
         </p>

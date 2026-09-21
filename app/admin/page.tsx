@@ -11,7 +11,9 @@ export default async function UsagePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-      <h1 className="text-xl font-semibold">Usage & cost estimate</h1>
+      <h1 className="text-2xl font-bold tracking-tight">
+        Usage & cost <span className="font-serif font-normal italic">estimate</span>
+      </h1>
 
       {!kvConfigured() && (
         <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">

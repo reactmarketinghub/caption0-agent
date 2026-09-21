@@ -83,7 +83,9 @@ export function CaptionGenerator() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
       <div>
-        <h1 className="text-2xl font-semibold">Caption Generator</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Caption <span className="font-serif font-normal italic">Generator</span>
+        </h1>
         <p className="text-sm text-muted-foreground">
           Drop a creative, pick a client, get ready-to-post captions.
         </p>

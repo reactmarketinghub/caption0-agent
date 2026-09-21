@@ -10,7 +10,9 @@ export default async function ClientsListPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Brand profiles</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Brand <span className="font-serif font-normal italic">profiles</span>
+        </h1>
         <Button nativeButton={false} render={<Link href="/admin/clients/new" />}>
           New client
         </Button>

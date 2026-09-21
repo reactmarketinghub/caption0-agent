@@ -10,6 +10,7 @@
   --font-sans: var(--font-sans);
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-heading: var(--font-sans);
+  --font-serif: var(--font-serif-accent);
   --color-brand-gold: var(--brand-gold);
   --color-brand-gold-foreground: var(--brand-gold-foreground);
   --color-brand-yellow: var(--brand-yellow);
