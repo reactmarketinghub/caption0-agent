@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { auth, signOut, isAuthConfigured } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
@@ -8,11 +9,16 @@ export async function AppHeader() {
   return (
     <header className="flex items-center justify-between border-b bg-card px-4 py-3">
       <div className="flex items-center gap-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span
-            aria-hidden
-            className="h-6 w-6 rounded-md bg-gradient-to-br from-primary to-brand-gold"
+        <Link href="/" className="flex items-center gap-2.5">
+          <Image
+            src="/react-logo.png"
+            alt="re:act"
+            width={93}
+            height={28}
+            className="h-5 w-auto dark:invert"
+            priority
           />
+          <span className="h-4 w-px bg-border" aria-hidden />
           <span className="text-[15px] font-bold tracking-tight">Caption Generator</span>
         </Link>
         <nav className="flex items-center gap-4 text-sm font-medium">
