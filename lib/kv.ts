@@ -1,5 +1,22 @@
 import { createClient, type VercelKV } from "@vercel/kv";
-import type { BrandProfile } from "./schemas";
+import { brandProfileSchema, type BrandProfile } from "./schemas";
+
+/**
+ * Profiles saved by an older version of the schema can be missing fields
+ * added since (e.g. `brandKitFiles`) - kv.get<T>() just deserializes JSON
+ * and trusts the type, so a raw stored value with a missing key would come
+ * back as `undefined` and crash whatever renders it. Re-validating through
+ * the schema fills in every field's `.default(...)` for anything missing,
+ * self-healing legacy profiles without a manual migration.
+ */
+function normalizeBrandProfile(raw: unknown): BrandProfile | null {
+  const parsed = brandProfileSchema.safeParse(raw);
+  if (!parsed.success) {
+    console.warn("Dropping unreadable brand profile:", parsed.error.message);
+    return null;
+  }
+  return parsed.data;
+}
 
 /**
  * Thin wrapper around Vercel KV (Upstash Redis under the hood). All calls are
@@ -62,8 +79,8 @@ export async function getBrandProfile(id: string): Promise<BrandProfile | null> 
   const kv = getKv();
   if (!kv || !id) return null;
   try {
-    const profile = await kv.get<BrandProfile>(PROFILE_KEY(id));
-    return profile ?? null;
+    const profile = await kv.get(PROFILE_KEY(id));
+    return profile ? normalizeBrandProfile(profile) : null;
   } catch (err) {
     console.warn("KV getBrandProfile failed:", err);
     return null;
@@ -76,8 +93,9 @@ export async function listBrandProfiles(): Promise<BrandProfile[]> {
   try {
     const ids = await kv.smembers(PROFILE_INDEX_KEY);
     if (!ids.length) return [];
-    const profiles = await Promise.all(ids.map((id) => kv.get<BrandProfile>(PROFILE_KEY(id))));
+    const profiles = await Promise.all(ids.map((id) => kv.get(PROFILE_KEY(id))));
     return profiles
+      .map(normalizeBrandProfile)
       .filter((p): p is BrandProfile => Boolean(p))
       .sort((a, b) => a.clientName.localeCompare(b.clientName));
   } catch (err) {
