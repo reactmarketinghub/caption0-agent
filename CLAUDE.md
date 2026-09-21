@@ -105,6 +105,27 @@ changes needed) and both folded into the system prompt in
 - **Objective** - `traffic` (optimize for a click/visit, direct CTA) vs
   `awareness` (optimize for recall/affinity, no hard sell).
 
+## Server component pages reading live KV data must opt out of static caching
+
+Next.js prerenders a Server Component page at *build* time by default
+unless something on it forces dynamic rendering - a dynamic route segment
+like `[id]` does this automatically, but a plain route like `/admin/clients`
+does not just because it happens to `await` a KV call. Without
+`export const dynamic = "force-dynamic"`, `/admin/clients` and `/admin`
+were being frozen as static HTML at whatever `listBrandProfiles()` /
+`buildUsageReport()` returned during `next build` - on Vercel that's
+usually an empty/stale snapshot from before any real data existed, and it
+never updates on its own after that, even though every client-side fetch
+(e.g. `ClientSelector`'s `fetch("/api/clients")`, since API routes are
+dynamic by default) correctly showed live data. This is exactly why a
+newly-saved client could appear in the main generator's client dropdown
+but never show up on `/admin/clients` - the page itself was stuck showing
+build time forever, not actually broken data. Both pages now have
+`export const dynamic = "force-dynamic"`. Any new Server Component page
+added under `app/` that reads `lib/kv.ts` (or anything else that changes at
+runtime) needs the same line - `next build`'s route list (`○` static vs
+`ƒ` dynamic) is the way to catch this before it ships again.
+
 ## Environment variables
 
 See `.env.example` for the full list and what breaks if each is missing.

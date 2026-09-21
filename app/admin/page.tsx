@@ -2,6 +2,10 @@ import { buildUsageReport } from "@/lib/usage";
 import { kvConfigured } from "@/lib/kv";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Reads live KV generation logs - see the same note in admin/clients/page.tsx
+// for why this must not be statically prerendered.
+export const dynamic = "force-dynamic";
+
 function formatUsd(amount: number): string {
   return amount.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
 }

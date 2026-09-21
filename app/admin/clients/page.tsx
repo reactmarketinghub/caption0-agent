@@ -6,6 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { kvConfigured } from "@/lib/kv";
 
+// This reads live KV data (brand profiles, upload logs) that changes on
+// every save/upload - without this, Next.js prerenders it once at build
+// time and serves that frozen snapshot forever, so newly saved clients
+// would never show up here even though they're really in KV.
+export const dynamic = "force-dynamic";
+
 function timeAgo(iso: string): string {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
   if (seconds < 60) return "just now";
