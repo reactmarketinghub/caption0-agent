@@ -104,6 +104,14 @@ Claude's vision, and returns one merged profile. These blobs share the
 `uploads/` prefix with ephemeral creatives, so the same 24h cleanup cron
 sweeps them - no separate cleanup needed.
 
+Every file's read/extract outcome (success or error, filename, timestamp,
+who uploaded it, and the client name typed in the form at the time, if any)
+is persisted to KV via `logBrandDocUpload()`/`listBrandDocLogs()` in
+`lib/kv.ts` and shown as a "Recent uploads" feed at the top of
+`/admin/clients` - this is a team-wide activity log, not tied to any one
+browser session, so an upload attempt is visible there even if the New
+client form was never saved.
+
 A profile can also be seeded from a generation: when no client is selected,
 successful results show an "Inferred voice" note with a "Save inferred
 voice as draft profile" button. This creates a profile with `isDraft: true`

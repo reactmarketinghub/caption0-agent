@@ -55,6 +55,8 @@ const PROFILE_INDEX_KEY = "profiles:index";
 const RATE_LIMIT_WINDOW_SECONDS = 60 * 60; // 1 hour
 const GENERATION_LOG_KEY = "logs:generations";
 const GENERATION_LOG_MAX_ENTRIES = 20000;
+const BRAND_DOC_LOG_KEY = "logs:brand-doc-uploads";
+const BRAND_DOC_LOG_MAX_ENTRIES = 500;
 
 export async function getBrandProfile(id: string): Promise<BrandProfile | null> {
   const kv = getKv();
@@ -167,6 +169,48 @@ export async function listGenerationLogs(limit = GENERATION_LOG_MAX_ENTRIES): Pr
       .filter((e): e is GenerationLogEntry => Boolean(e));
   } catch (err) {
     console.warn("KV listGenerationLogs failed:", err);
+    return [];
+  }
+}
+
+export interface BrandDocLogEntry {
+  timestamp: string;
+  userEmail: string;
+  fileName: string;
+  status: "success" | "error";
+  error?: string;
+  /** Client name typed in the form at upload time, if any (client may not be saved yet). */
+  clientName?: string;
+}
+
+/** Recent brand-doc/screenshot upload+extraction attempts, shown on the clients list page. */
+export async function logBrandDocUpload(entry: BrandDocLogEntry): Promise<void> {
+  const kv = getKv();
+  if (!kv) return;
+  try {
+    await kv.lpush(BRAND_DOC_LOG_KEY, JSON.stringify(entry));
+    await kv.ltrim(BRAND_DOC_LOG_KEY, 0, BRAND_DOC_LOG_MAX_ENTRIES - 1);
+  } catch (err) {
+    console.warn("KV logBrandDocUpload failed:", err);
+  }
+}
+
+export async function listBrandDocLogs(limit = 20): Promise<BrandDocLogEntry[]> {
+  const kv = getKv();
+  if (!kv) return [];
+  try {
+    const raw = await kv.lrange(BRAND_DOC_LOG_KEY, 0, limit - 1);
+    return raw
+      .map((r) => {
+        try {
+          return JSON.parse(r) as BrandDocLogEntry;
+        } catch {
+          return null;
+        }
+      })
+      .filter((e): e is BrandDocLogEntry => Boolean(e));
+  } catch (err) {
+    console.warn("KV listBrandDocLogs failed:", err);
     return [];
   }
 }

@@ -188,7 +188,7 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
       const res = await fetch("/api/brand-doc/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ files: successfulFiles }),
+        body: JSON.stringify({ files: successfulFiles, clientName: state.clientName }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Could not read those files.");
@@ -203,7 +203,7 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
     } finally {
       setExtracting(false);
     }
-  }, []);
+  }, [state.clientName]);
 
   async function handleExtractFromPaste() {
     if (!pasteText.trim()) return;

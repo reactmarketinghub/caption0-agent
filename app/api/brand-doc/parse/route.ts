@@ -3,6 +3,8 @@ import { brandDocParseResultSchema } from "@/lib/schemas";
 import { generateStructured, type ImageInput } from "@/lib/claudeGenerate";
 import { buildBrandDocParseSystemPrompt } from "@/lib/prompts";
 import { extractTextFromFile } from "@/lib/extractDocText";
+import { logBrandDocUpload } from "@/lib/kv";
+import { getCurrentUserEmail } from "@/lib/auth";
 
 export const maxDuration = 60;
 
@@ -22,6 +24,12 @@ interface BrandDocFileRef {
   contentType: string;
 }
 
+interface FileOutcome {
+  name: string;
+  status: "success" | "error";
+  error?: string;
+}
+
 function isTrustedBlobUrl(url: string): boolean {
   try {
     const { protocol, hostname } = new URL(url);
@@ -35,6 +43,15 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const files: BrandDocFileRef[] = Array.isArray(body?.files) ? body.files.slice(0, MAX_FILES) : [];
   const pastedText: string = typeof body?.text === "string" ? body.text : "";
+  const clientName: string | undefined =
+    typeof body?.clientName === "string" && body.clientName.trim() ? body.clientName.trim() : undefined;
+
+  let userEmail = "unknown";
+  try {
+    userEmail = await getCurrentUserEmail();
+  } catch {
+    // Best-effort for logging only - don't block extraction on this.
+  }
 
   if (!files.length && !pastedText.trim()) {
     return NextResponse.json({ error: "Upload a file or paste some text first." }, { status: 400 });
@@ -46,11 +63,14 @@ export async function POST(req: Request) {
 
   const textParts: string[] = [];
   const images: ImageInput[] = [];
+  const outcomes: FileOutcome[] = [];
 
   if (pastedText.trim()) textParts.push(pastedText);
 
-  try {
-    for (const f of files) {
+  // Each file is read independently - one unreadable file shouldn't sink the
+  // rest of the batch, and each outcome is logged for the admin's activity feed.
+  for (const f of files) {
+    try {
       const res = await fetch(f.url);
       if (!res.ok) throw new Error(`Could not download ${f.name}`);
       const buffer = Buffer.from(await res.arrayBuffer());
@@ -65,16 +85,34 @@ export async function POST(req: Request) {
         const text = await extractTextFromFile({ buffer, name: f.name, type: f.contentType });
         if (text.trim()) textParts.push(`--- ${f.name} ---\n${text}`);
       }
+      outcomes.push({ name: f.name, status: "success" });
+    } catch (err) {
+      console.error(`Brand doc file fetch/extract failed for ${f.name}:`, err);
+      outcomes.push({
+        name: f.name,
+        status: "error",
+        error: err instanceof Error ? err.message : "Could not read this file.",
+      });
     }
-  } catch (err) {
-    console.error("Brand doc file fetch/extract failed:", err);
-    return NextResponse.json(
-      { error: "We couldn't read one of those files. Please try again." },
-      { status: 400 },
+  }
+
+  async function flushLogs(finalError?: string) {
+    await Promise.all(
+      outcomes.map((o) =>
+        logBrandDocUpload({
+          timestamp: new Date().toISOString(),
+          userEmail,
+          fileName: o.name,
+          clientName,
+          status: o.status === "success" && !finalError ? "success" : "error",
+          error: o.status === "error" ? o.error : finalError,
+        }),
+      ),
     );
   }
 
   if (!textParts.length && !images.length) {
+    await flushLogs();
     return NextResponse.json(
       { error: "No readable text or images were found in those files." },
       { status: 400 },
@@ -95,9 +133,11 @@ export async function POST(req: Request) {
       images,
       schema: brandDocParseResultSchema,
     });
+    await flushLogs();
     return NextResponse.json(data);
   } catch (err) {
     console.error("Brand doc parse failed:", err);
+    await flushLogs("Claude couldn't extract a profile from this.");
     return NextResponse.json(
       { error: "We couldn't turn that into a profile. Please try again or fill the fields in manually." },
       { status: 502 },
