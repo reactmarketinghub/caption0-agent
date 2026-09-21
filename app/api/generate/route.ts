@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { generateRequestSchema, generationResponseSchema } from "@/lib/schemas";
 import { generateStructured } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
+import { validateGenerationResponse } from "@/lib/generationValidation";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
 import { getCurrentUserEmail } from "@/lib/auth";
 
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
       userText,
       images: images.map((dataUrl) => ({ dataUrl })),
       schema: generationResponseSchema,
+      validate: (d) => validateGenerationResponse(d, postFormat),
     });
 
     await logGeneration({

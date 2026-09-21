@@ -176,11 +176,7 @@ export async function extractBrandProfileFromFiles({
       schema: brandDocParseResultSchema,
     });
     await flushLogs();
-    // generateStructured's `schema: z.ZodType<T>` param forces Input=Output in
-    // its generic, so T infers with the schema's (optional-before-default)
-    // input shape rather than brandDocParseResultSchema's actual parsed
-    // output - the runtime value is a fully-defaulted BrandDocParseResult.
-    return { data: data as BrandDocParseResult, outcomes };
+    return { data, outcomes };
   } catch (err) {
     console.error("Brand doc parse failed:", err);
     await flushLogs("Claude couldn't extract a profile from this.");

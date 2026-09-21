@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Copy, Check, RefreshCw, Scissors, Zap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PLATFORM_RULES, type PlatformId } from "@/config/platforms";
+import { PLATFORM_RULES, getEffectiveCharLimit, type PlatformId } from "@/config/platforms";
 import type { CaptionVariant, RefineRequest } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,7 @@ export function CaptionVariantCard({
   // A dark post (ad) truncates its primary text much tighter than the
   // platform's hard character cap - flag against that limit instead when
   // it's an ad, since that's the number that actually matters here.
-  const displayLimit = isDarkPost ? (rules.darkPostVisibleChars ?? rules.maxChars) : rules.maxChars;
+  const displayLimit = getEffectiveCharLimit(rules, refineContext.postFormat);
   const limitLabel = isDarkPost ? "chars (ad limit)" : "chars";
   const overLimit = variant.char_count > displayLimit;
   const overHashtags = variant.hashtags.length > rules.maxHashtags;

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { refineRequestSchema, captionVariantSchema } from "@/lib/schemas";
 import { generateStructured } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
+import { validateCaptionLength } from "@/lib/generationValidation";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
 import { getCurrentUserEmail } from "@/lib/auth";
 
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
       userText,
       images: images.map((dataUrl) => ({ dataUrl })),
       schema: refineResponseSchema,
+      validate: (d) => validateCaptionLength(platform, postFormat, d.variant),
     });
 
     await logGeneration({

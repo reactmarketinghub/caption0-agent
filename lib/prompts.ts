@@ -32,10 +32,10 @@ function platformBlock(ids: PlatformId[], postFormat: PostFormat): string {
   return ids
     .map((id) => {
       const r = PLATFORM_RULES[id];
-      const visibleChars =
-        postFormat === "dark-post" ? (r.darkPostVisibleChars ?? r.visibleChars) : r.visibleChars;
-      const truncationContext = postFormat === "dark-post" ? "ad primary text" : "feed";
-      return `- ${r.label}: max ${r.maxChars} characters, ~${visibleChars} visible before ${truncationContext} truncation, up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
+      if (postFormat === "dark-post" && r.darkPostVisibleChars) {
+        return `- ${r.label} (${r.network} ad): HARD LIMIT of ${r.darkPostVisibleChars} characters for the ENTIRE caption. This is a dark post - there is no "see more" expansion to fall back on, so the whole caption (not just a preview/hook) must fit inside this limit. Up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
+      }
+      return `- ${r.label}: max ${r.maxChars} characters, ~${r.visibleChars} visible before feed truncation, up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
     })
     .join("\n");
 }
@@ -145,6 +145,7 @@ export function buildBrandDocParseSystemPrompt(): string {
   ].join("\n\n");
 }
 
-export function buildRetrySystemSuffix(): string {
-  return `\n\nYour previous response could not be parsed as valid JSON matching the required schema. Return ONLY the corrected strict JSON, nothing else.`;
+export function buildRetrySystemSuffix(reason?: string): string {
+  const why = reason ?? "Your previous response could not be parsed as valid JSON matching the required schema.";
+  return `\n\n${why} Return ONLY the corrected strict JSON, nothing else.`;
 }
