@@ -7,6 +7,8 @@
  * and update `lastVerified`.
  */
 
+import type { PostFormat } from "./objectives";
+
 export type PlatformId = "instagram" | "tiktok" | "facebook" | "linkedin";
 
 /** Ad network grouping - Instagram and Facebook both run under Meta's ad limits. */
@@ -102,3 +104,30 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
 };
 
 export const ALL_PLATFORM_IDS = Object.keys(PLATFORM_RULES) as PlatformId[];
+
+export const ALL_NETWORKS: AdNetwork[] = ["Meta", "TikTok", "LinkedIn"];
+
+/**
+ * Platform selection in the UI is grouped by ad network, not by individual
+ * platform - Meta always means Instagram + Facebook together (one caption
+ * per platform is still generated, tuned to each platform's own hashtag/
+ * style rules, but you can't select one without the other).
+ */
+export const NETWORK_PLATFORMS: Record<AdNetwork, PlatformId[]> = ALL_PLATFORM_IDS.reduce(
+  (acc, id) => {
+    const network = PLATFORM_RULES[id].network;
+    acc[network] = [...(acc[network] ?? []), id];
+    return acc;
+  },
+  {} as Record<AdNetwork, PlatformId[]>,
+);
+
+/**
+ * The character limit that actually applies right now: the platform's hard
+ * technical cap for a grid (organic) post, or the tighter ad primary-text
+ * limit for a dark post (falling back to the hard cap when a platform has
+ * no distinct, verified ad number).
+ */
+export function getEffectiveCharLimit(rules: PlatformRules, postFormat: PostFormat): number {
+  return postFormat === "dark-post" ? (rules.darkPostVisibleChars ?? rules.maxChars) : rules.maxChars;
+}

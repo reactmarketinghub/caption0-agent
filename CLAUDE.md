@@ -20,12 +20,13 @@ pick a client, get ready-to-post Instagram/TikTok/Facebook/LinkedIn captions.
 ## Architecture
 
 ```
-config/platforms.ts          Per-platform limits/style rules (edit freely, no code changes needed elsewhere)
-config/objectives.ts         Post format (grid/dark-post) + objective (traffic/awareness) + awareness-stage rules (same edit-freely pattern)
+config/platforms.ts          Per-platform limits/style rules + network grouping (edit freely, no code changes needed elsewhere)
+config/objectives.ts         Post format (grid/dark-post) + objective (traffic/awareness) rules (same edit-freely pattern)
 
 lib/
   anthropic.ts                Anthropic client + CLAUDE_MODEL constant (bump this one line to upgrade models)
-  claudeGenerate.ts           generateStructured(): calls Claude, parses/validates JSON with zod, retries once
+  claudeGenerate.ts           generateStructured(): calls Claude, parses/validates JSON with zod, retries once on invalid JSON or a failed `validate` check
+  generationValidation.ts     Post-generation character-limit checks passed to generateStructured() as `validate`
   prompts.ts                  System prompt builders (Mode A/B, post format/objective, video no-audio disclaimer, brand-doc parsing)
   schemas.ts                  zod schemas: BrandProfile, GenerationResponse, API request bodies
   kv.ts                       Vercel KV wrapper: brand profiles, rate limiting, generation/upload logs
@@ -39,7 +40,8 @@ components/
   UploadZone.tsx               Single drop zone; classifies dropped files as static/carousel/video
   CarouselThumbnails.tsx       Drag-to-reorder carousel thumbnails (dnd-kit)
   CaptionGenerator.tsx          Main page orchestrator (client component)
-  PostSettingsFields.tsx        Post format / objective / awareness-stage controls (config/objectives.ts driven)
+  PostSettingsFields.tsx        Post format / objective controls (config/objectives.ts driven)
+  PlatformCheckboxes.tsx        Network selection (Meta/TikTok/LinkedIn, config/platforms.ts driven) - see "Platform selection is network-level" below
   CaptionResults.tsx / CaptionVariantCard.tsx    Per-platform tabs, copy/regenerate/shorter/punchier
   BrandProfileForm.tsx          Admin create/edit form, incl. "import from doc" flow
   BrandKitSection.tsx           Brand kit uploads; auto-extracts guidelines from doc-type files into the profile
@@ -200,6 +202,35 @@ the platform's hard `maxChars` (grid posts) to `darkPostVisibleChars` (dark
 posts) accordingly - a dark-post caption that's fine under the platform's
 technical cap but blows past the ad's visible-text truncation still needs
 to show red, since that's the number that actually matters for an ad.
+`getEffectiveCharLimit(rules, postFormat)` in `config/platforms.ts` is the
+one place that decides which number is "the" limit for a given
+platform/format pair - the UI, the prompt, and the post-generation
+validation below all call through it rather than each re-deriving it.
+
+**Platform selection is network-level, not per-platform.** The checkboxes
+in `PlatformCheckboxes.tsx` iterate `ALL_NETWORKS` ("Meta", "TikTok",
+"LinkedIn") via `NETWORK_PLATFORMS` in `config/platforms.ts`, not
+`ALL_PLATFORM_IDS` - checking "Meta" always selects Instagram *and*
+Facebook together (you can't pick one without the other), since that's how
+ad ops actually thinks about a Meta post. A caption is still generated per
+individual platform under the hood (each with its own hashtag/style rules),
+this only changes the selection granularity in the UI.
+
+**Character limits are enforced, not just displayed.** `lib/
+generationValidation.ts` (`validateGenerationResponse` for `/api/generate`,
+`validateCaptionLength` for `/api/refine`) is passed as the `validate`
+callback to `generateStructured()` (`lib/claudeGenerate.ts`), which now
+supports retrying once with a corrective, violation-specific instruction
+when a business rule fails - not just on invalid JSON like before. A
+caption over its `getEffectiveCharLimit()` triggers exactly this: one
+retry telling Claude specifically which platform/variant was over and by
+how much, asking for the *entire* caption (not just the hook) to fit. If
+it's still over after that retry, the result is returned anyway rather
+than failing the whole generation - the UI's red flag is the last-resort
+signal, the retry is the first line of defense. `buildSystemPrompt()` also
+states dark-post limits as a hard requirement up front (not framed as a
+soft "visible before truncation" preview window like grid posts get),
+since a dark post has no "see more" to fall back on.
 
 ## Video: frames only (no audio) - this is intentional
 
