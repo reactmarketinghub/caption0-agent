@@ -21,24 +21,28 @@ pick a client, get ready-to-post Instagram/TikTok/Facebook/LinkedIn captions.
 
 ```
 config/platforms.ts          Per-platform limits/style rules (edit freely, no code changes needed elsewhere)
+config/objectives.ts         Post format (grid/dark-post) + objective (traffic/awareness) + awareness-stage rules (same edit-freely pattern)
 
 lib/
   anthropic.ts                Anthropic client + CLAUDE_MODEL constant (bump this one line to upgrade models)
   claudeGenerate.ts           generateStructured(): calls Claude, parses/validates JSON with zod, retries once
-  prompts.ts                  System prompt builders (Mode A/B, video no-audio disclaimer, brand-doc parsing)
+  prompts.ts                  System prompt builders (Mode A/B, post format/objective, video no-audio disclaimer, brand-doc parsing)
   schemas.ts                  zod schemas: BrandProfile, GenerationResponse, API request bodies
-  kv.ts                       Vercel KV wrapper: brand profiles, rate limiting, generation logs
+  kv.ts                       Vercel KV wrapper: brand profiles, rate limiting, generation/upload logs
+  brandDocExtraction.ts       Shared file->text/image->Claude->structured-profile pipeline, used by both the manual "Import from files" flow and automatic brand-kit guideline extraction
   auth.ts                     Auth.js config + getCurrentUserEmail()
   usage.ts                    Token -> USD cost estimate + usage report aggregation
-  extractDocText.ts           PDF/DOCX/text -> plain text for the brand-doc-to-profile flow
+  extractDocText.ts           PDF/PPTX/DOCX/text -> plain text for the brand-doc-to-profile flow
   client/                     Browser-only helpers: image resize, video frame extraction, Blob upload
 
 components/
   UploadZone.tsx               Single drop zone; classifies dropped files as static/carousel/video
   CarouselThumbnails.tsx       Drag-to-reorder carousel thumbnails (dnd-kit)
   CaptionGenerator.tsx          Main page orchestrator (client component)
+  PostSettingsFields.tsx        Post format / objective / awareness-stage controls (config/objectives.ts driven)
   CaptionResults.tsx / CaptionVariantCard.tsx    Per-platform tabs, copy/regenerate/shorter/punchier
   BrandProfileForm.tsx          Admin create/edit form, incl. "import from doc" flow
+  BrandKitSection.tsx           Brand kit uploads; auto-extracts guidelines from doc-type files into the profile
 
 app/
   page.tsx                     Main generator UI
@@ -67,9 +71,32 @@ Blob isn't configured, this silently no-ops and generation still works.
 
 `/api/generate` builds a system prompt (`lib/prompts.ts`) from the platform
 rules + either a loaded `BrandProfile` (Mode A) or an instruction to infer
-tone from the creative (Mode B), calls Claude with the images, validates the
-response against `generationResponseSchema` with zod, and retries once on a
-parse/validation failure before returning a friendly error.
+tone from the creative (Mode B) + the post format and objective (see below),
+calls Claude with the images, validates the response against
+`generationResponseSchema` with zod, and retries once on a parse/validation
+failure before returning a friendly error.
+
+There is intentionally no manual "brief" field anywhere in this flow - the
+whole point of this tool is to minimize manual input, so Claude infers the
+key message/CTA entirely from the creative, the brand profile, and the
+post-format/objective controls below.
+
+### Post format & objective
+
+Two required controls sit next to the platform checkboxes, both driven by
+`config/objectives.ts` (edit that file to add/reword options - no other code
+changes needed) and both folded into the system prompt in
+`buildSystemPrompt()`:
+
+- **Post format** - `grid` (organic, will appear on the client's public
+  feed - write it as an on-brand native post) vs `dark-post` (a paid ad that
+  will never appear on the grid - fine to be more direct/CTA-forward).
+- **Objective** - `traffic` (optimize for a click/visit, direct CTA) vs
+  `awareness` (optimize for recall/affinity, no hard sell). Picking
+  `awareness` reveals a third control, **awareness stage** - Eugene
+  Schwartz's five stages (unaware -> problem-aware -> solution-aware ->
+  product-aware -> most-aware) - so tone matches how close the audience
+  already is to the brand/product, not just the general objective.
 
 ## Environment variables
 
@@ -124,10 +151,25 @@ Once a client is saved, its edit page (`/admin/clients/[id]`) shows a
 **Brand kit** section for uploading reference files (logos, guideline docs,
 fonts - any file type). These are stored persistently in Vercel Blob under
 `brand-kits/{clientId}/...` (a different prefix than the ephemeral
-`uploads/...` creatives, so the 24h cleanup cron never touches them) and are
-purely for the team's reference - **they are never sent to Claude**. A new
+`uploads/...` creatives, so the 24h cleanup cron never touches them). A new
 (unsaved) client has no id yet, so this section only appears once the
 profile has been created at least once.
+
+**Guideline decks are used, not just stored.** When an uploaded brand kit
+file is a PDF/PPTX/DOCX/TXT (checked via `isAutoExtractableDoc()` in
+`lib/brandDocExtraction.ts`), the POST handler in
+`/api/clients/[id]/brand-kit` automatically runs it through the same
+extraction pipeline as the "Import from files" flow and merges the result
+into the profile with `mergeExtractedIntoProfile()` - blank single-value
+fields (tone, emoji/hashtag rules, CTA style) get filled in, list fields
+(do's/don'ts/banned words/example captions) get unioned in, and nothing a
+human already typed is overwritten. That merged profile is what
+`brandVoiceBlock()` injects into every future generation for this client -
+so uploading a client's brand guidelines toolkit here is enough to have
+captions follow it going forward, for this or any other client. Everything
+else (logos, fonts, arbitrary assets) is stored for the team's reference
+only and is **never** sent to Claude - only recognized document types
+trigger extraction.
 
 ## How to update platform rules
 
@@ -141,10 +183,13 @@ truth for both the prompt and the UI's over-limit warnings.
 ## Video: frames only (no audio) - this is intentional
 
 The system prompt explicitly tells Claude it cannot hear the video and must
-not guess at dialogue/voiceover. The "looks VO-heavy" nudge
+not guess at dialogue/voiceover. The "looks VO-heavy" flag
 (`lib/client/extractVideoFrames.ts`) is a cheap, non-ML heuristic based on
 frame-to-frame pixel change (very high = fast cuts, very low = a static
-locked-off shot like a talking head) - tune `FAST_CUT_THRESHOLD` /
+locked-off shot like a talking head) - when it fires, `buildSystemPrompt()`
+adds an extra instruction to lean even harder on on-screen text and stay
+conservative, since it's flagged there but not surfaced as a manual
+brief-me nudge (there's no brief field). Tune `FAST_CUT_THRESHOLD` /
 `STATIC_SHOT_THRESHOLD` after looking at real client videos.
 
 **Audio/video transcription is a planned future stage.** Do not build

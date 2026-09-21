@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Loader2, Paperclip, Trash2, Download } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, Paperclip, Trash2, Download, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { uploadBrandKitFile } from "@/lib/client/uploadBrandKitFile";
@@ -19,16 +20,20 @@ interface BrandKitSectionProps {
 }
 
 export function BrandKitSection({ clientId, initialFiles }: BrandKitSectionProps) {
+  const router = useRouter();
   const [files, setFiles] = useState<BrandKitFile[]>(initialFiles);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mergedNote, setMergedNote] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleUpload(fileList: FileList) {
     setUploading(true);
     setError(null);
+    setMergedNote(null);
     try {
+      let anyMerged = false;
       for (const file of Array.from(fileList)) {
         const blob = await uploadBrandKitFile(clientId, file);
         const res = await fetch(`/api/clients/${clientId}/brand-kit`, {
@@ -44,6 +49,11 @@ export function BrandKitSection({ clientId, initialFiles }: BrandKitSectionProps
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Could not save that file.");
         setFiles(json.brandKitFiles);
+        if (json.guidelinesMerged) anyMerged = true;
+      }
+      if (anyMerged) {
+        setMergedNote("Guidelines from that upload were merged into this client's profile fields below.");
+        router.refresh();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");
@@ -77,8 +87,17 @@ export function BrandKitSection({ clientId, initialFiles }: BrandKitSectionProps
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
           Logos, guideline docs, fonts, or anything else worth keeping on hand for this client.
-          Stored for the team - not sent to Claude.
+          Guideline decks (PDF/PPTX/DOCX/TXT) are automatically read and merged into this client&apos;s
+          profile fields below so future captions follow them - everything else (logos, fonts, etc.)
+          is stored for the team&apos;s reference only and never sent to Claude.
         </p>
+
+        {mergedNote && (
+          <p className="flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400">
+            <Sparkles className="h-3.5 w-3.5" />
+            {mergedNote}
+          </p>
+        )}
 
         {files.length > 0 && (
           <ul className="divide-y rounded-md border">
