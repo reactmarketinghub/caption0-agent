@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { clientId, postFormat, objective, awarenessStage, platform, creativeType, images, currentCaption, instruction } =
+  const { clientId, postFormat, objective, platform, creativeType, images, currentCaption, instruction } =
     parsedRequest.data;
 
   const profile = clientId ? await getBrandProfile(clientId) : null;
@@ -48,7 +48,6 @@ export async function POST(req: Request) {
     profile,
     postFormat,
     objective,
-    awarenessStage,
     platforms: [platform],
     creativeType,
   });

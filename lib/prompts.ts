@@ -1,12 +1,5 @@
 import { PLATFORM_RULES, type PlatformId } from "@/config/platforms";
-import {
-  POST_FORMAT_RULES,
-  OBJECTIVE_RULES,
-  AWARENESS_STAGE_RULES,
-  type PostFormat,
-  type Objective,
-  type AwarenessStage,
-} from "@/config/objectives";
+import { POST_FORMAT_RULES, OBJECTIVE_RULES, type PostFormat, type Objective } from "@/config/objectives";
 import type { BrandProfile } from "./schemas";
 
 const JSON_CONTRACT = `Return ONLY strict JSON matching this exact shape, no markdown fences, no commentary:
@@ -70,7 +63,6 @@ export interface BuildSystemPromptArgs {
   profile?: BrandProfile | null;
   postFormat: PostFormat;
   objective: Objective;
-  awarenessStage?: AwarenessStage;
   platforms: PlatformId[];
   creativeType: "static" | "carousel" | "video";
   /** Cheap pixel-based heuristic flag (fast cuts or a static talking-head shot) - see lib/client/extractVideoFrames.ts. */
@@ -81,7 +73,6 @@ export function buildSystemPrompt({
   profile,
   postFormat,
   objective,
-  awarenessStage,
   platforms,
   creativeType,
   videoLooksVoHeavy,
@@ -93,12 +84,6 @@ export function buildSystemPrompt({
     `Post format: ${POST_FORMAT_RULES[postFormat].label}. ${POST_FORMAT_RULES[postFormat].styleGuidance}`,
     `Campaign objective: ${OBJECTIVE_RULES[objective].label}. ${OBJECTIVE_RULES[objective].styleGuidance}`,
   ];
-
-  if (objective === "awareness" && awarenessStage) {
-    parts.push(
-      `Audience awareness stage: ${AWARENESS_STAGE_RULES[awarenessStage].label} (${AWARENESS_STAGE_RULES[awarenessStage].description}). ${AWARENESS_STAGE_RULES[awarenessStage].styleGuidance}`,
-    );
-  }
 
   if (creativeType === "carousel") {
     parts.push(

@@ -2,18 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  ALL_POST_FORMATS,
-  ALL_OBJECTIVES,
-  ALL_AWARENESS_STAGES,
-  POST_FORMAT_RULES,
-  OBJECTIVE_RULES,
-  AWARENESS_STAGE_RULES,
-  type PostFormat,
-  type Objective,
-  type AwarenessStage,
-} from "@/config/objectives";
+import { ALL_POST_FORMATS, ALL_OBJECTIVES, POST_FORMAT_RULES, OBJECTIVE_RULES, type PostFormat, type Objective } from "@/config/objectives";
 import { cn } from "@/lib/utils";
 
 interface PostSettingsFieldsProps {
@@ -21,8 +10,6 @@ interface PostSettingsFieldsProps {
   onPostFormatChange: (value: PostFormat) => void;
   objective: Objective;
   onObjectiveChange: (value: Objective) => void;
-  awarenessStage: AwarenessStage;
-  onAwarenessStageChange: (value: AwarenessStage) => void;
 }
 
 function ToggleGroup<T extends string>({
@@ -59,8 +46,6 @@ export function PostSettingsFields({
   onPostFormatChange,
   objective,
   onObjectiveChange,
-  awarenessStage,
-  onAwarenessStageChange,
 }: PostSettingsFieldsProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -85,27 +70,6 @@ export function PostSettingsFields({
         />
         <p className="text-xs text-muted-foreground">{OBJECTIVE_RULES[objective].description}</p>
       </div>
-
-      {objective === "awareness" && (
-        <div className="space-y-1.5 sm:col-span-2">
-          <Label>Awareness stage</Label>
-          <Select value={awarenessStage} onValueChange={(v) => onAwarenessStageChange(v as AwarenessStage)}>
-            <SelectTrigger className="w-full sm:w-72">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ALL_AWARENESS_STAGES.map((stage) => (
-                <SelectItem key={stage} value={stage}>
-                  {AWARENESS_STAGE_RULES[stage].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {AWARENESS_STAGE_RULES[awarenessStage].description}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

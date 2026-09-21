@@ -3,13 +3,6 @@ import { z } from "zod";
 export const platformIdSchema = z.enum(["instagram", "tiktok", "facebook", "linkedin"]);
 export const postFormatSchema = z.enum(["grid", "dark-post"]);
 export const objectiveSchema = z.enum(["traffic", "awareness"]);
-export const awarenessStageSchema = z.enum([
-  "unaware",
-  "problem-aware",
-  "solution-aware",
-  "product-aware",
-  "most-aware",
-]);
 
 /** One file in a client's brand kit (logo, guidelines doc, fonts, etc. - any type). */
 export const brandKitFileSchema = z.object({
@@ -86,8 +79,6 @@ export const generateRequestSchema = z.object({
   clientId: z.string().optional(),
   postFormat: postFormatSchema,
   objective: objectiveSchema,
-  /** Only meaningful (and required) when objective is "awareness". */
-  awarenessStage: awarenessStageSchema.optional(),
   platforms: z.array(platformIdSchema).min(1),
   creativeType: z.enum(["static", "carousel", "video"]),
   /** data URLs or Blob URLs for images (static: 1, carousel: many, video: extracted frames) */
@@ -102,7 +93,6 @@ export const refineRequestSchema = z.object({
   clientId: z.string().optional(),
   postFormat: postFormatSchema,
   objective: objectiveSchema,
-  awarenessStage: awarenessStageSchema.optional(),
   platform: platformIdSchema,
   creativeType: z.enum(["static", "carousel", "video"]),
   images: z.array(z.string()).min(1),

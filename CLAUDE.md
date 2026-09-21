@@ -92,11 +92,7 @@ changes needed) and both folded into the system prompt in
   feed - write it as an on-brand native post) vs `dark-post` (a paid ad that
   will never appear on the grid - fine to be more direct/CTA-forward).
 - **Objective** - `traffic` (optimize for a click/visit, direct CTA) vs
-  `awareness` (optimize for recall/affinity, no hard sell). Picking
-  `awareness` reveals a third control, **awareness stage** - Eugene
-  Schwartz's five stages (unaware -> problem-aware -> solution-aware ->
-  product-aware -> most-aware) - so tone matches how close the audience
-  already is to the brand/product, not just the general objective.
+  `awareness` (optimize for recall/affinity, no hard sell).
 
 ## Environment variables
 

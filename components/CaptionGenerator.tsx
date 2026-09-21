@@ -10,7 +10,7 @@ import { PostSettingsFields } from "./PostSettingsFields";
 import { PlatformCheckboxes } from "./PlatformCheckboxes";
 import { CaptionResults } from "./CaptionResults";
 import { ALL_PLATFORM_IDS, type PlatformId } from "@/config/platforms";
-import type { PostFormat, Objective, AwarenessStage } from "@/config/objectives";
+import type { PostFormat, Objective } from "@/config/objectives";
 import type { CreativeAsset, CreativeType } from "@/lib/client/creativeAsset";
 import type { BrandProfile, GenerationResponse } from "@/lib/schemas";
 
@@ -21,7 +21,6 @@ export function CaptionGenerator() {
   const [looksVoHeavy, setLooksVoHeavy] = useState(false);
   const [postFormat, setPostFormat] = useState<PostFormat>("grid");
   const [objective, setObjective] = useState<Objective>("traffic");
-  const [awarenessStage, setAwarenessStage] = useState<AwarenessStage>("unaware");
   const [platforms, setPlatforms] = useState<PlatformId[]>(ALL_PLATFORM_IDS);
   const [results, setResults] = useState<GenerationResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,7 +60,6 @@ export function CaptionGenerator() {
           clientId: clientId ?? undefined,
           postFormat,
           objective,
-          awarenessStage: objective === "awareness" ? awarenessStage : undefined,
           platforms,
           creativeType,
           images: assets.map((a) => a.dataUrl),
@@ -82,7 +80,6 @@ export function CaptionGenerator() {
     clientId: clientId ?? undefined,
     postFormat,
     objective,
-    awarenessStage: objective === "awareness" ? awarenessStage : undefined,
     creativeType: creativeType ?? "static",
     images: assets.map((a) => a.dataUrl),
   };
@@ -160,8 +157,6 @@ export function CaptionGenerator() {
         onPostFormatChange={setPostFormat}
         objective={objective}
         onObjectiveChange={setObjective}
-        awarenessStage={awarenessStage}
-        onAwarenessStageChange={setAwarenessStage}
       />
 
       <PlatformCheckboxes selected={platforms} onChange={setPlatforms} />
