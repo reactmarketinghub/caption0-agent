@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { del } from "@vercel/blob";
 import { getBrandProfile, saveBrandProfile } from "@/lib/kv";
+import { resolveBlobToken } from "@/lib/blob";
 
 interface RouteParams {
   params: Promise<{ id: string; fileId: string }>;
@@ -14,9 +15,10 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
   const file = profile.brandKitFiles.find((f) => f.id === fileId);
   if (!file) return NextResponse.json({ error: "File not found." }, { status: 404 });
 
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const token = resolveBlobToken();
+  if (token) {
     try {
-      await del(file.url);
+      await del(file.url, { token });
     } catch (err) {
       console.warn("Blob delete failed (continuing to remove from profile):", err);
     }

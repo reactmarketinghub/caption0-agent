@@ -1,5 +1,6 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
+import { resolveBlobToken } from "@/lib/blob";
 
 /**
  * Issues client-upload tokens for Vercel Blob so the browser can upload
@@ -20,7 +21,8 @@ import { NextResponse } from "next/server";
  *                             never auto-deleted.
  */
 export async function POST(request: Request) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  const token = resolveBlobToken();
+  if (!token) {
     return NextResponse.json(
       { error: "Blob storage is not configured on this environment." },
       { status: 501 },
@@ -33,6 +35,7 @@ export async function POST(request: Request) {
     const jsonResponse = await handleUpload({
       body,
       request,
+      token,
       onBeforeGenerateToken: async (pathname) => {
         if (pathname.startsWith("brand-kits/")) {
           return {

@@ -30,6 +30,7 @@ lib/
   prompts.ts                  System prompt builders (Mode A/B, post format/objective, video no-audio disclaimer, brand-doc parsing)
   schemas.ts                  zod schemas: BrandProfile, GenerationResponse, API request bodies
   kv.ts                       Vercel KV wrapper: brand profiles, rate limiting, generation/upload logs
+  blob.ts                     Resolves the Blob read-write token (handles a custom env-var-prefix connection, see "Custom Environment Variable Prefix gotcha" below)
   brandDocExtraction.ts       Shared file->text/image->Claude->structured-profile pipeline, used by both the manual "Import from files" flow and automatic brand-kit guideline extraction
   auth.ts                     Auth.js config + getCurrentUserEmail()
   usage.ts                    Token -> USD cost estimate + usage report aggregation
@@ -111,6 +112,24 @@ Only `ANTHROPIC_API_KEY` is required to run the core generation flow
 locally - Blob, KV, and Auth all degrade gracefully when unset so you can
 build/test incrementally (this is intentional, see `kvConfigured()` /
 `isAuthConfigured()` checks throughout `lib/`).
+
+**Custom Environment Variable Prefix gotcha.** Vercel's "Connect Project"
+flow for a Marketplace store (Blob or Upstash Redis) can apply a custom
+prefix - connecting a store named e.g. "ClientTab" this way produces
+`CLIENTTAB_BLOB_READ_WRITE_TOKEN` / `CLIENTTAB_KV_REST_API_URL` instead of
+the bare names every SDK call and this app's own checks default to. The
+dashboard will show the store as "Available" and correctly connected, so
+this is easy to misdiagnose as "Blob/KV isn't configured" when it actually
+is, just under a different env var name. `lib/blob.ts`'s
+`resolveBlobToken()` and `lib/kv.ts`'s `resolveKvCredentials()` both scan
+`process.env` for a `*_BLOB_READ_WRITE_TOKEN` / `*_KV_REST_API_URL` +
+`*_KV_REST_API_TOKEN` pair as a fallback, so this should self-heal without
+renaming anything in the Vercel dashboard - but every new `@vercel/blob`
+call needs to go through `resolveBlobToken()` and pass `token` explicitly
+(rather than trusting the SDK's own `process.env.BLOB_READ_WRITE_TOKEN`
+default) for this to actually take effect. `/api/debug/env-check` reports
+which exact env var name it found for both, if you need to confirm this on
+a live deployment.
 
 ## How to add a client (brand profile)
 

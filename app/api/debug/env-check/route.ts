@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { kvConfigured } from "@/lib/kv";
+import { blobConfigured } from "@/lib/blob";
 
 /**
  * TEMPORARY diagnostic route - reports env var presence (never values) plus
@@ -9,6 +10,7 @@ import { kvConfigured } from "@/lib/kv";
  */
 export async function GET() {
   const kvUrlKey = Object.keys(process.env).find((k) => k.endsWith("KV_REST_API_URL")) ?? null;
+  const blobTokenKey = Object.keys(process.env).find((k) => k.endsWith("BLOB_READ_WRITE_TOKEN")) ?? null;
 
   return NextResponse.json({
     hasAnthropicKey: Boolean(process.env.ANTHROPIC_API_KEY),
@@ -17,6 +19,8 @@ export async function GET() {
     hasAuthGoogleId: Boolean(process.env.AUTH_GOOGLE_ID),
     kvConfigured: kvConfigured(),
     kvUrlEnvVarName: kvUrlKey,
+    blobConfigured: blobConfigured(),
+    blobTokenEnvVarName: blobTokenKey,
     hasBlobToken: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
     vercelEnv: process.env.VERCEL_ENV ?? null,
     vercelGitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? null,

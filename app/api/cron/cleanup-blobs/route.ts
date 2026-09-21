@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { list, del } from "@vercel/blob";
+import { resolveBlobToken } from "@/lib/blob";
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -21,7 +22,8 @@ export async function GET(req: Request) {
     }
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  const token = resolveBlobToken();
+  if (!token) {
     return NextResponse.json({ skipped: true, reason: "Blob not configured" });
   }
 
@@ -30,10 +32,13 @@ export async function GET(req: Request) {
   let deleted = 0;
 
   do {
-    const { blobs, cursor: nextCursor, hasMore } = await list({ prefix: "uploads/", cursor });
+    const { blobs, cursor: nextCursor, hasMore } = await list({ prefix: "uploads/", cursor, token });
     const stale = blobs.filter((b) => new Date(b.uploadedAt).getTime() < cutoff);
     if (stale.length > 0) {
-      await del(stale.map((b) => b.url));
+      await del(
+        stale.map((b) => b.url),
+        { token },
+      );
       deleted += stale.length;
     }
     cursor = hasMore ? nextCursor : undefined;
