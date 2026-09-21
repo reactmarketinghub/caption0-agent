@@ -1,4 +1,12 @@
 import { PLATFORM_RULES, type PlatformId } from "@/config/platforms";
+import {
+  POST_FORMAT_RULES,
+  OBJECTIVE_RULES,
+  AWARENESS_STAGE_RULES,
+  type PostFormat,
+  type Objective,
+  type AwarenessStage,
+} from "@/config/objectives";
 import type { BrandProfile } from "./schemas";
 
 const JSON_CONTRACT = `Return ONLY strict JSON matching this exact shape, no markdown fences, no commentary:
@@ -31,7 +39,7 @@ function platformBlock(ids: PlatformId[]): string {
 
 function brandVoiceBlock(profile?: BrandProfile | null): string {
   if (!profile) {
-    return `No brand profile is available for this client. Infer an appropriate tone of voice from the creative itself (visual style, on-screen text, mood, subject matter) and the brief if provided. Return your inferred tone as a short 1-2 sentence "inferred_voice" string so a human can sanity-check it before posting.`;
+    return `No brand profile is available for this client. Infer an appropriate tone of voice from the creative itself (visual style, on-screen text, mood, subject matter). Return your inferred tone as a short 1-2 sentence "inferred_voice" string so a human can sanity-check it before posting.`;
   }
 
   const lines = [
@@ -60,22 +68,37 @@ function brandVoiceBlock(profile?: BrandProfile | null): string {
 
 export interface BuildSystemPromptArgs {
   profile?: BrandProfile | null;
-  brief?: string;
+  postFormat: PostFormat;
+  objective: Objective;
+  awarenessStage?: AwarenessStage;
   platforms: PlatformId[];
   creativeType: "static" | "carousel" | "video";
+  /** Cheap pixel-based heuristic flag (fast cuts or a static talking-head shot) - see lib/client/extractVideoFrames.ts. */
+  videoLooksVoHeavy?: boolean;
 }
 
 export function buildSystemPrompt({
   profile,
-  brief,
+  postFormat,
+  objective,
+  awarenessStage,
   platforms,
   creativeType,
+  videoLooksVoHeavy,
 }: BuildSystemPromptArgs): string {
   const parts: string[] = [
     `You are a senior social media copywriter at a marketing agency, writing ready-to-post captions for a client's social channels.`,
     brandVoiceBlock(profile),
     `Platforms requested (per-platform rules):\n${platformBlock(platforms)}`,
+    `Post format: ${POST_FORMAT_RULES[postFormat].label}. ${POST_FORMAT_RULES[postFormat].styleGuidance}`,
+    `Campaign objective: ${OBJECTIVE_RULES[objective].label}. ${OBJECTIVE_RULES[objective].styleGuidance}`,
   ];
+
+  if (objective === "awareness" && awarenessStage) {
+    parts.push(
+      `Audience awareness stage: ${AWARENESS_STAGE_RULES[awarenessStage].label} (${AWARENESS_STAGE_RULES[awarenessStage].description}). ${AWARENESS_STAGE_RULES[awarenessStage].styleGuidance}`,
+    );
+  }
 
   if (creativeType === "carousel") {
     parts.push(
@@ -85,14 +108,17 @@ export function buildSystemPrompt({
 
   if (creativeType === "video") {
     parts.push(
-      `The creative is a video. You are shown ${`several evenly-spaced extracted frames`}, including an early frame around the 0.5s mark (the "hook" moment). You CANNOT hear this video's audio. Base captions strictly on the visuals, any on-screen text/captions visible in the frames, and the brief provided below. Do NOT guess at, invent, or paraphrase spoken dialogue or voiceover content — if the brief doesn't cover it, keep the caption grounded in what is visually shown.`,
+      `The creative is a video. You are shown ${`several evenly-spaced extracted frames`}, including an early frame around the 0.5s mark (the "hook" moment). You CANNOT hear this video's audio. Base captions strictly on the visuals and any on-screen text/captions visible in the frames. Do NOT guess at, invent, or paraphrase spoken dialogue or voiceover content — keep the caption grounded in what is visually shown.`,
     );
+    if (videoLooksVoHeavy) {
+      parts.push(
+        `A heuristic flagged this video as likely voiceover/dialogue-heavy (either fast cuts or a static locked-off shot like a talking head) - spoken content here is probably important but completely invisible to you, so lean even more heavily on any on-screen text/captions and the product/brand context visible in frames, and keep the caption conservative rather than guessing at what's being said.`,
+      );
+    }
   }
 
   parts.push(
-    brief && brief.trim().length > 0
-      ? `Brief from the social media manager (key message / CTA / offer / launch date): ${brief.trim()}`
-      : `No brief was provided. Infer the key message from the creative alone; keep claims conservative and avoid inventing specific offers, prices, or dates that aren't visible in the creative.`,
+    `No written brief is provided for this post - infer the key message, CTA, and any offer/launch context entirely from the creative itself (visual style, on-screen text, product shown) plus the brand profile, post format, and objective above. Keep claims conservative and avoid inventing specific prices, dates, or promo details that aren't visible in the creative.`,
   );
 
   parts.push(JSON_CONTRACT);

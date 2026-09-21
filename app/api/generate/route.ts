@@ -36,11 +36,20 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { clientId, brief, platforms, creativeType, images } = parsedRequest.data;
+  const { clientId, postFormat, objective, awarenessStage, platforms, creativeType, images, videoLooksVoHeavy } =
+    parsedRequest.data;
 
   const profile = clientId ? await getBrandProfile(clientId) : null;
 
-  const system = buildSystemPrompt({ profile, brief, platforms, creativeType });
+  const system = buildSystemPrompt({
+    profile,
+    postFormat,
+    objective,
+    awarenessStage,
+    platforms,
+    creativeType,
+    videoLooksVoHeavy,
+  });
   const userText =
     creativeType === "video"
       ? "Here are the extracted video frames in chronological order. Generate the captions now."

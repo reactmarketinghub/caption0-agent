@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { UploadZone, type UploadResult } from "./UploadZone";
 import { CarouselThumbnails } from "./CarouselThumbnails";
 import { ClientSelector } from "./ClientSelector";
-import { BriefField } from "./BriefField";
+import { PostSettingsFields } from "./PostSettingsFields";
 import { PlatformCheckboxes } from "./PlatformCheckboxes";
 import { CaptionResults } from "./CaptionResults";
 import { ALL_PLATFORM_IDS, type PlatformId } from "@/config/platforms";
+import type { PostFormat, Objective, AwarenessStage } from "@/config/objectives";
 import type { CreativeAsset, CreativeType } from "@/lib/client/creativeAsset";
 import type { BrandProfile, GenerationResponse } from "@/lib/schemas";
 
@@ -18,7 +19,9 @@ export function CaptionGenerator() {
   const [creativeType, setCreativeType] = useState<CreativeType | null>(null);
   const [assets, setAssets] = useState<CreativeAsset[]>([]);
   const [looksVoHeavy, setLooksVoHeavy] = useState(false);
-  const [brief, setBrief] = useState("");
+  const [postFormat, setPostFormat] = useState<PostFormat>("grid");
+  const [objective, setObjective] = useState<Objective>("traffic");
+  const [awarenessStage, setAwarenessStage] = useState<AwarenessStage>("unaware");
   const [platforms, setPlatforms] = useState<PlatformId[]>(ALL_PLATFORM_IDS);
   const [results, setResults] = useState<GenerationResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,7 +59,9 @@ export function CaptionGenerator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientId: clientId ?? undefined,
-          brief,
+          postFormat,
+          objective,
+          awarenessStage: objective === "awareness" ? awarenessStage : undefined,
           platforms,
           creativeType,
           images: assets.map((a) => a.dataUrl),
@@ -75,7 +80,9 @@ export function CaptionGenerator() {
 
   const refineContext = {
     clientId: clientId ?? undefined,
-    brief,
+    postFormat,
+    objective,
+    awarenessStage: objective === "awareness" ? awarenessStage : undefined,
     creativeType: creativeType ?? "static",
     images: assets.map((a) => a.dataUrl),
   };
@@ -125,7 +132,11 @@ export function CaptionGenerator() {
           {creativeType === "video" && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Film className="h-4 w-4" />
-              <span>{assets.length} frames extracted (no audio is sent or analyzed).</span>
+              <span>
+                {assets.length} frames extracted (no audio is sent or analyzed).
+                {looksVoHeavy &&
+                  " This looks voiceover/dialogue-heavy - captions will lean on visuals and on-screen text only."}
+              </span>
             </div>
           )}
           {creativeType === "video" && (
@@ -144,7 +155,14 @@ export function CaptionGenerator() {
         </div>
       )}
 
-      <BriefField value={brief} onChange={setBrief} showVoNudge={creativeType === "video" && looksVoHeavy} />
+      <PostSettingsFields
+        postFormat={postFormat}
+        onPostFormatChange={setPostFormat}
+        objective={objective}
+        onObjectiveChange={setObjective}
+        awarenessStage={awarenessStage}
+        onAwarenessStageChange={setAwarenessStage}
+      />
 
       <PlatformCheckboxes selected={platforms} onChange={setPlatforms} />
 

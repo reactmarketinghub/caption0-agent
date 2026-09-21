@@ -4,11 +4,12 @@ const FRAME_COUNT = 7; // within the 6-8 spec range
 const HOOK_TIMESTAMP_SEC = 0.5;
 const TINY_SIZE = 24; // for cheap frame-diff heuristic
 
-// Lightweight, non-ML heuristic thresholds for the "looks VO-heavy" nudge.
+// Lightweight, non-ML heuristic thresholds for the "looks VO-heavy" flag.
 // Based on mean luminance change between consecutive sampled frames (0-255 scale).
 // High = lots of scene changes (fast cuts). Very low = a single static shot
 // (e.g. locked-off talking head). Both patterns often mean the audio (VO/speech)
-// carries the message, which we can't hear - hence the nudge to add a brief.
+// carries the message, which we can't hear - the flag makes the system prompt
+// lean harder on on-screen text and stay conservative (see lib/prompts.ts).
 // These are starting points; tune after reviewing real client videos.
 const FAST_CUT_THRESHOLD = 38;
 const STATIC_SHOT_THRESHOLD = 3;

@@ -40,11 +40,18 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { clientId, brief, platform, creativeType, images, currentCaption, instruction } =
+  const { clientId, postFormat, objective, awarenessStage, platform, creativeType, images, currentCaption, instruction } =
     parsedRequest.data;
 
   const profile = clientId ? await getBrandProfile(clientId) : null;
-  const system = buildSystemPrompt({ profile, brief, platforms: [platform], creativeType });
+  const system = buildSystemPrompt({
+    profile,
+    postFormat,
+    objective,
+    awarenessStage,
+    platforms: [platform],
+    creativeType,
+  });
   const userText = `The current caption for this platform is:\n"""\n${currentCaption}\n"""\n${INSTRUCTION_TEXT[instruction]}\n\nReturn ONLY strict JSON of the shape { "variant": { "caption": string, "hashtags": string[], "char_count": number } }, no markdown fences.`;
 
   try {
