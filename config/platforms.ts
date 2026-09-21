@@ -9,9 +9,14 @@
 
 export type PlatformId = "instagram" | "tiktok" | "facebook" | "linkedin";
 
+/** Ad network grouping - Instagram and Facebook both run under Meta's ad limits. */
+export type AdNetwork = "Meta" | "TikTok" | "LinkedIn";
+
 export interface PlatformRules {
   id: PlatformId;
   label: string;
+  /** Which ad network's dark-post limits apply to this platform. */
+  network: AdNetwork;
   /** Hard character limit enforced by the platform. */
   maxChars: number;
   /**
@@ -39,6 +44,7 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
   instagram: {
     id: "instagram",
     label: "Instagram",
+    network: "Meta",
     // 2,200 char hard cap; hashtags count toward this limit.
     maxChars: 2200,
     // ~125 chars show before "... more" in feed.
@@ -53,6 +59,7 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
   tiktok: {
     id: "tiktok",
     label: "TikTok",
+    network: "TikTok",
     // Native app caption limit; some accounts/APIs report up to 4,000, but 2,200
     // is the safe, broadly-applicable ceiling to avoid false "OK" on accounts capped lower.
     maxChars: 2200,
@@ -68,6 +75,7 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
   facebook: {
     id: "facebook",
     label: "Facebook",
+    network: "Meta",
     // Technical cap is 63,206 chars, but posts truncate hard in-feed.
     maxChars: 63206,
     // ~477 chars visible on desktop, ~125 on mobile before "See more".
@@ -82,6 +90,7 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
   linkedin: {
     id: "linkedin",
     label: "LinkedIn",
+    network: "LinkedIn",
     maxChars: 3000,
     // ~210 chars visible on desktop, ~140 on mobile before "see more".
     visibleChars: 210,

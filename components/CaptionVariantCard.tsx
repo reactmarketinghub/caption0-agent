@@ -25,11 +25,18 @@ export function CaptionVariantCard({
   const [busyAction, setBusyAction] = useState<RefineRequest["instruction"] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const rules = PLATFORM_RULES[platform];
+  const isDarkPost = refineContext.postFormat === "dark-post";
 
   const fullText = [variant.caption, variant.hashtags.map((h) => `#${h}`).join(" ")]
     .filter(Boolean)
     .join("\n\n");
-  const overLimit = variant.char_count > rules.maxChars;
+
+  // A dark post (ad) truncates its primary text much tighter than the
+  // platform's hard character cap - flag against that limit instead when
+  // it's an ad, since that's the number that actually matters here.
+  const displayLimit = isDarkPost ? (rules.darkPostVisibleChars ?? rules.maxChars) : rules.maxChars;
+  const limitLabel = isDarkPost ? "chars (ad limit)" : "chars";
+  const overLimit = variant.char_count > displayLimit;
   const overHashtags = variant.hashtags.length > rules.maxHashtags;
 
   async function handleCopy() {
@@ -75,9 +82,10 @@ export function CaptionVariantCard({
         </div>
       )}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge variant="outline">{rules.network}</Badge>
           <span className={cn(overLimit && "font-medium text-red-600 dark:text-red-400")}>
-            {variant.char_count.toLocaleString()} / {rules.maxChars.toLocaleString()} chars
+            {variant.char_count.toLocaleString()} / {displayLimit.toLocaleString()} {limitLabel}
             {overLimit ? " - over limit!" : ""}
           </span>
           <span className={cn(overHashtags && "font-medium text-red-600 dark:text-red-400")}>

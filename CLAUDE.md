@@ -192,6 +192,15 @@ LinkedIn currently), dark-post generations just fall back to the organic
 `visibleChars` number. Currently verified: Meta (Instagram/Facebook) ads at
 125 chars, TikTok ads at 100 chars.
 
+`network` labels which ad network's dark-post limits a platform shares
+(Instagram and Facebook both run under `"Meta"`) - `CaptionVariantCard`
+shows it as a small badge on every result so it's clear at a glance which
+limit applies, and its "over limit" red-flagging in the UI switches from
+the platform's hard `maxChars` (grid posts) to `darkPostVisibleChars` (dark
+posts) accordingly - a dark-post caption that's fine under the platform's
+technical cap but blows past the ad's visible-text truncation still needs
+to show red, since that's the number that actually matters for an ad.
+
 ## Video: frames only (no audio) - this is intentional
 
 The system prompt explicitly tells Claude it cannot hear the video and must
