@@ -3,23 +3,57 @@
 import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Sparkles, Trash2, UploadCloud, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Sparkles,
+  Trash2,
+  UploadCloud,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { BrandKitSection } from "@/components/BrandKitSection";
+import { uploadBrandDocFile } from "@/lib/client/uploadBrandDocFile";
 import { cn } from "@/lib/utils";
 import type { BrandDocParseResult, BrandProfile, BrandProfileInput } from "@/lib/schemas";
 
-const ACCEPTED_EXTENSIONS = ".pptx,.pdf,.docx,.txt";
+const ACCEPTED_EXTENSIONS = ".pptx,.pdf,.docx,.txt,.png,.jpg,.jpeg,.webp,.gif";
 const ACCEPTED_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
 ].join(",");
+
+interface UploadLogEntry {
+  id: string;
+  name: string;
+  size: number;
+  status: "uploading" | "parsing" | "done" | "error";
+  error?: string;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function toLines(value: string): string[] {
   return value
@@ -84,7 +118,8 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
   const [pasteText, setPasteText] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [extracting, setExtracting] = useState(false);
-  const [extractedFrom, setExtractedFrom] = useState<string | null>(null);
+  const [uploadLog, setUploadLog] = useState<UploadLogEntry[]>([]);
+  const [detailsOpen, setDetailsOpen] = useState(!!profile);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,22 +143,63 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
         ? fromLines(result.exampleCaptions)
         : s.exampleCaptions,
     }));
+    setDetailsOpen(true);
   }
 
-  const handleExtractFromFile = useCallback(async (file: File) => {
-    setExtracting(true);
+  const handleFiles = useCallback(async (incoming: File[]) => {
+    if (!incoming.length) return;
     setError(null);
-    setExtractedFrom(null);
+    setExtracting(true);
+
+    const ids = incoming.map(() => crypto.randomUUID());
+    setUploadLog((log) => [
+      ...incoming.map((f, i) => ({ id: ids[i], name: f.name, size: f.size, status: "uploading" as const })),
+      ...log,
+    ]);
+
+    const uploaded = await Promise.all(
+      incoming.map(async (file, i) => {
+        try {
+          const blob = await uploadBrandDocFile(file);
+          setUploadLog((log) => log.map((e) => (e.id === ids[i] ? { ...e, status: "parsing" } : e)));
+          return { url: blob.url, name: file.name, contentType: file.type || "application/octet-stream" };
+        } catch (err) {
+          setUploadLog((log) =>
+            log.map((e) =>
+              e.id === ids[i]
+                ? { ...e, status: "error" as const, error: err instanceof Error ? err.message : "Upload failed" }
+                : e,
+            ),
+          );
+          return null;
+        }
+      }),
+    );
+
+    const successfulIds = ids.filter((_, i) => uploaded[i] !== null);
+    const successfulFiles = uploaded.filter((u): u is NonNullable<typeof u> => u !== null);
+
+    if (!successfulFiles.length) {
+      setExtracting(false);
+      return;
+    }
+
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/brand-doc/parse", { method: "POST", body: form });
+      const res = await fetch("/api/brand-doc/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: successfulFiles }),
+      });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Could not read that file.");
+      if (!res.ok) throw new Error(json.error ?? "Could not read those files.");
       applyExtracted(json as BrandDocParseResult);
-      setExtractedFrom(file.name);
+      setUploadLog((log) => log.map((e) => (successfulIds.includes(e.id) ? { ...e, status: "done" as const } : e)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not read that file.");
+      const message = err instanceof Error ? err.message : "Could not read those files.";
+      setError(message);
+      setUploadLog((log) =>
+        log.map((e) => (successfulIds.includes(e.id) ? { ...e, status: "error" as const, error: message } : e)),
+      );
     } finally {
       setExtracting(false);
     }
@@ -133,7 +209,8 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
     if (!pasteText.trim()) return;
     setExtracting(true);
     setError(null);
-    setExtractedFrom(null);
+    const id = crypto.randomUUID();
+    setUploadLog((log) => [{ id, name: "Pasted text", size: pasteText.length, status: "parsing" }, ...log]);
     try {
       const res = await fetch("/api/brand-doc/parse", {
         method: "POST",
@@ -143,9 +220,11 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Could not parse that text.");
       applyExtracted(json as BrandDocParseResult);
-      setExtractedFrom("pasted text");
+      setUploadLog((log) => log.map((e) => (e.id === id ? { ...e, status: "done" } : e)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not parse that text.");
+      const message = err instanceof Error ? err.message : "Could not parse that text.";
+      setError(message);
+      setUploadLog((log) => log.map((e) => (e.id === id ? { ...e, status: "error", error: message } : e)));
     } finally {
       setExtracting(false);
     }
@@ -216,10 +295,10 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
 
       <div className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold">Import from a deck or doc</h2>
+          <h2 className="text-lg font-semibold">Import from files</h2>
           <p className="text-sm text-muted-foreground">
-            Drop a brand deck or guidelines file and Claude fills in everything below for you to
-            review before saving.
+            Drop any PDFs, decks, or screenshots for this client - Claude reads them and fills in a
+            profile below for you to review before saving. Drop as many at once as you like.
           </p>
         </div>
 
@@ -238,8 +317,8 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
           onDrop={(e) => {
             e.preventDefault();
             setIsDragging(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file && !extracting) void handleExtractFromFile(file);
+            const files = Array.from(e.dataTransfer.files ?? []);
+            if (files.length && !extracting) void handleFiles(files);
           }}
           className={cn(
             "flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors",
@@ -255,28 +334,47 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
           ) : (
             <>
               <UploadCloud className="h-7 w-7 text-muted-foreground" />
-              <p className="font-medium">Drag & drop a deck or doc, or click to browse</p>
-              <p className="text-sm text-muted-foreground">PPTX · PDF · DOCX · TXT</p>
+              <p className="font-medium">Drag & drop files, or click to browse</p>
+              <p className="text-sm text-muted-foreground">PDF · PPTX · DOCX · TXT · screenshots</p>
             </>
           )}
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             accept={`${ACCEPTED_EXTENSIONS},${ACCEPTED_MIME_TYPES}`}
             className="hidden"
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void handleExtractFromFile(file);
+              const files = Array.from(e.target.files ?? []);
+              if (files.length) void handleFiles(files);
               e.target.value = "";
             }}
           />
         </div>
 
-        {extractedFrom && !extracting && (
-          <p className="flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400">
-            <CheckCircle2 className="h-4 w-4" />
-            Extracted from {extractedFrom} - review the fields below before saving.
-          </p>
+        {uploadLog.length > 0 && (
+          <ul className="space-y-1.5 rounded-lg border p-3 text-sm">
+            {uploadLog.map((entry) => (
+              <li key={entry.id} className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  {entry.status === "uploading" || entry.status === "parsing" ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
+                  ) : entry.status === "done" ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5 shrink-0 text-red-600 dark:text-red-400" />
+                  )}
+                  <span className="truncate">{entry.name}</span>
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {entry.status === "uploading" && "Uploading..."}
+                  {entry.status === "parsing" && "Extracting..."}
+                  {entry.status === "done" && formatBytes(entry.size)}
+                  {entry.status === "error" && (entry.error ?? "Failed")}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
 
         {!showPaste ? (
@@ -328,7 +426,13 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
           <CardDescription>
             Filled in automatically from your import above - edit anything before saving.
           </CardDescription>
+          <CardAction>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setDetailsOpen((v) => !v)}>
+              {detailsOpen ? "Hide" : "Show"}
+            </Button>
+          </CardAction>
         </CardHeader>
+        {detailsOpen && (
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="toneOfVoice">Tone of voice</Label>
@@ -404,6 +508,7 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
             />
           </div>
         </CardContent>
+        )}
       </Card>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

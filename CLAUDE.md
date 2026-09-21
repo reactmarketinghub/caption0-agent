@@ -82,14 +82,27 @@ build/test incrementally (this is intentional, see `kvConfigured()` /
 ## How to add a client (brand profile)
 
 1. Go to `/admin/clients` -> "New client".
-2. Either fill the fields by hand, or paste/upload the client's brand voice
-   doc (PDF/DOCX/text) and click "Extract with Claude" - it fills the form
-   for you to review and edit before saving. Nothing is saved until you
-   click "Save profile".
+2. Either fill the fields by hand, or drag in the client's brand material -
+   any mix of PDFs, PPTX/DOCX decks, plain text, or screenshots, one file or
+   many at once - and Claude extracts a profile automatically. Each file
+   shows live in an upload log (uploading -> extracting -> done/error) so
+   it's obvious what got read. The extracted fields land in a collapsed
+   "Profile details" section (auto-expanded once something is extracted) to
+   review and edit before saving. Nothing is saved until you click "Save
+   profile".
 3. The client then appears in the main generator's client dropdown, and
    their profile is injected into the system prompt (`lib/prompts.ts` ->
    `brandVoiceBlock()`) for every generation instead of the "infer the
    tone" instruction.
+
+Upload mechanics: files go straight from the browser to Vercel Blob under
+`uploads/brand-doc/...` (bypassing the ~4.5MB serverless body cap the same
+way creative uploads do - see `lib/client/uploadBrandDocFile.ts`), then
+`/api/brand-doc/parse` fetches each one server-side, extracts text
+(PDF/PPTX/DOCX/TXT via `lib/extractDocText.ts`) or passes images straight to
+Claude's vision, and returns one merged profile. These blobs share the
+`uploads/` prefix with ephemeral creatives, so the same 24h cleanup cron
+sweeps them - no separate cleanup needed.
 
 A profile can also be seeded from a generation: when no client is selected,
 successful results show an "Inferred voice" note with a "Save inferred

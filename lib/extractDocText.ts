@@ -1,9 +1,14 @@
-/** Extracts plain text from a brand voice doc or slide deck (PDF, PPTX, DOCX, or plain text). */
-export async function extractTextFromFile(file: File): Promise<string> {
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const name = file.name.toLowerCase();
+export interface ExtractableFile {
+  buffer: Buffer;
+  name: string;
+  type: string;
+}
 
-  if (file.type === "application/pdf" || name.endsWith(".pdf")) {
+/** Extracts plain text from a brand voice doc or slide deck (PDF, PPTX, DOCX, or plain text). */
+export async function extractTextFromFile({ buffer, name, type }: ExtractableFile): Promise<string> {
+  const lowerName = name.toLowerCase();
+
+  if (type === "application/pdf" || lowerName.endsWith(".pdf")) {
     const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: buffer });
     try {
@@ -15,15 +20,15 @@ export async function extractTextFromFile(file: File): Promise<string> {
   }
 
   if (
-    file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-    name.endsWith(".pptx")
+    type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    lowerName.endsWith(".pptx")
   ) {
     return extractPptxText(buffer);
   }
 
   if (
-    file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-    name.endsWith(".docx")
+    type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    lowerName.endsWith(".docx")
   ) {
     const mammoth = await import("mammoth");
     const result = await mammoth.extractRawText({ buffer });
