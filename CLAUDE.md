@@ -170,11 +170,19 @@ trigger extraction.
 ## How to update platform rules
 
 Edit `config/platforms.ts` only - nothing else needs to change. Each entry
-has `maxChars`, `visibleChars` (before feed truncation), `maxHashtags`, a
-`styleGuidance` string injected into the prompt, and a `lastVerified` date.
-**Re-verify against each platform's current help docs before changing
-numbers** - these change over time and this file is the single source of
-truth for both the prompt and the UI's over-limit warnings.
+has `maxChars`, `visibleChars` (before organic/grid feed truncation),
+`maxHashtags`, a `styleGuidance` string injected into the prompt, and a
+`lastVerified` date. **Re-verify against each platform's current help docs
+before changing numbers** - these change over time and this file is the
+single source of truth for both the prompt and the UI's over-limit warnings.
+
+`darkPostVisibleChars` is the same idea as `visibleChars` but for the ad
+primary-text truncation point when Post format is set to "Dark post" -
+`platformBlock()` in `lib/prompts.ts` picks whichever one matches the
+selected post format. It's optional per platform; when unset (e.g.
+LinkedIn currently), dark-post generations just fall back to the organic
+`visibleChars` number. Currently verified: Meta (Instagram/Facebook) ads at
+125 chars, TikTok ads at 100 chars.
 
 ## Video: frames only (no audio) - this is intentional
 

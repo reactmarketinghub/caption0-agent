@@ -15,10 +15,18 @@ export interface PlatformRules {
   /** Hard character limit enforced by the platform. */
   maxChars: number;
   /**
-   * Characters visible in-feed before a "more"/"see more" truncation.
+   * Characters visible in-feed before a "more"/"see more" truncation, for an
+   * organic (grid) post.
    * The hook/key message should land inside this window.
    */
   visibleChars: number;
+  /**
+   * Same idea as `visibleChars`, but for a dark post (ad) - the primary-text
+   * truncation point in the ad unit, which is often tighter than the organic
+   * feed. Falls back to `visibleChars` when a platform has no distinct,
+   * verified ad-specific number.
+   */
+  darkPostVisibleChars?: number;
   /** Recommended max hashtags for this app's output (style guidance, not a platform hard cap unless noted). */
   maxHashtags: number;
   /** Short style guidance injected into the system prompt. */
@@ -35,10 +43,12 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     maxChars: 2200,
     // ~125 chars show before "... more" in feed.
     visibleChars: 125,
+    // Meta (Instagram/Facebook) ads: 125 chars of primary text visible before truncation.
+    darkPostVisibleChars: 125,
     maxHashtags: 5,
     styleGuidance:
       "Put the hook / key message in the first line so it survives feed truncation. Conversational, can use emoji sparingly. Hashtags at the end, max 5, specific and relevant (not generic spam tags).",
-    lastVerified: "2026-09-17",
+    lastVerified: "2026-09-21",
   },
   tiktok: {
     id: "tiktok",
@@ -48,10 +58,12 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     maxChars: 2200,
     // ~100 chars visible before truncation in the caption area.
     visibleChars: 100,
+    // TikTok ads: 100 chars of primary text visible before truncation.
+    darkPostVisibleChars: 100,
     maxHashtags: 5,
     styleGuidance:
       "Short, punchy, conversational, written like a comment not an ad. Front-load the hook. Use keyword-rich phrasing (TikTok search relies on caption text), max 5 hashtags mixing a niche tag with broader ones.",
-    lastVerified: "2026-09-17",
+    lastVerified: "2026-09-21",
   },
   facebook: {
     id: "facebook",
@@ -60,10 +72,12 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     maxChars: 63206,
     // ~477 chars visible on desktop, ~125 on mobile before "See more".
     visibleChars: 250,
+    // Meta (Instagram/Facebook) ads: 125 chars of primary text visible before truncation.
+    darkPostVisibleChars: 125,
     maxHashtags: 2,
     styleGuidance:
       "Conversational, minimal or no hashtags (at most 1-2 if genuinely relevant). Fine to be a bit longer/storytelling, but keep the key point in the first sentence or two before the 'See more' fold.",
-    lastVerified: "2026-09-17",
+    lastVerified: "2026-09-21",
   },
   linkedin: {
     id: "linkedin",

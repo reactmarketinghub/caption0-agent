@@ -21,11 +21,14 @@ Rules for the JSON:
 - "hashtags" entries do not include the leading "#".
 - Do not wrap the JSON in \`\`\`.`;
 
-function platformBlock(ids: PlatformId[]): string {
+function platformBlock(ids: PlatformId[], postFormat: PostFormat): string {
   return ids
     .map((id) => {
       const r = PLATFORM_RULES[id];
-      return `- ${r.label}: max ${r.maxChars} characters, ~${r.visibleChars} visible before truncation, up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
+      const visibleChars =
+        postFormat === "dark-post" ? (r.darkPostVisibleChars ?? r.visibleChars) : r.visibleChars;
+      const truncationContext = postFormat === "dark-post" ? "ad primary text" : "feed";
+      return `- ${r.label}: max ${r.maxChars} characters, ~${visibleChars} visible before ${truncationContext} truncation, up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
     })
     .join("\n");
 }
@@ -80,7 +83,7 @@ export function buildSystemPrompt({
   const parts: string[] = [
     `You are a senior social media copywriter at a marketing agency, writing ready-to-post captions for a client's social channels.`,
     brandVoiceBlock(profile),
-    `Platforms requested (per-platform rules):\n${platformBlock(platforms)}`,
+    `Platforms requested (per-platform rules):\n${platformBlock(platforms, postFormat)}`,
     `Post format: ${POST_FORMAT_RULES[postFormat].label}. ${POST_FORMAT_RULES[postFormat].styleGuidance}`,
     `Campaign objective: ${OBJECTIVE_RULES[objective].label}. ${OBJECTIVE_RULES[objective].styleGuidance}`,
   ];
