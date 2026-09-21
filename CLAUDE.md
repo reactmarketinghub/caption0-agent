@@ -81,6 +81,14 @@ whole point of this tool is to minimize manual input, so Claude infers the
 key message/CTA entirely from the creative, the brand profile, and the
 post-format/objective controls below.
 
+Every generation also carries a standing `HUMAN_VOICE_GUIDANCE` block in
+`lib/prompts.ts` telling Claude to avoid stock AI-sounding phrasing
+("elevate," "unlock," "game-changer," forced rule-of-three lists, em-dash
+tics, etc.) and to vary rhythm across the 3 variants instead of running the
+same template with different words. Keep this block intact (add to it
+rather than removing it) when touching `buildSystemPrompt()` - this is a
+standing requirement, not a one-off tweak.
+
 ### Post format & objective
 
 Two required controls sit next to the platform checkboxes, both driven by

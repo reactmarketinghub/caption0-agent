@@ -2,6 +2,13 @@ import { PLATFORM_RULES, type PlatformId } from "@/config/platforms";
 import { POST_FORMAT_RULES, OBJECTIVE_RULES, type PostFormat, type Objective } from "@/config/objectives";
 import type { BrandProfile } from "./schemas";
 
+const HUMAN_VOICE_GUIDANCE = `Write like a real social media manager typed this between other tasks, not like an AI. Concretely:
+- Skip stock AI phrasing: "elevate," "unlock," "unleash," "game-changer," "dive in," "in today's world," "look no further," "whether you're X or Y." If a phrase sounds like it belongs in every other brand's caption too, cut it.
+- No forced rule-of-three lists and no "it's not just X, it's Y" construction unless a real example genuinely calls for it.
+- Don't lean on em dashes as a tic. Punctuate the way a person actually types a caption.
+- Vary sentence length and rhythm across the 3 variants - they shouldn't read like the same template with words swapped.
+- Sound specific to this creative and this brand, not like generic ad copy that could run under any photo.`;
+
 const JSON_CONTRACT = `Return ONLY strict JSON matching this exact shape, no markdown fences, no commentary:
 {
   "inferred_voice"?: string,   // include ONLY if no brand profile was given
@@ -108,6 +115,8 @@ export function buildSystemPrompt({
   parts.push(
     `No written brief is provided for this post - infer the key message, CTA, and any offer/launch context entirely from the creative itself (visual style, on-screen text, product shown) plus the brand profile, post format, and objective above. Keep claims conservative and avoid inventing specific prices, dates, or promo details that aren't visible in the creative.`,
   );
+
+  parts.push(HUMAN_VOICE_GUIDANCE);
 
   parts.push(JSON_CONTRACT);
 
