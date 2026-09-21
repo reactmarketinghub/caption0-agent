@@ -22,6 +22,7 @@ export function PlatformCheckboxes({ selected, onChange }: PlatformCheckboxesPro
             id={`platform-${id}`}
             checked={selected.includes(id)}
             onCheckedChange={(checked) => toggle(id, checked === true)}
+            className="data-checked:border-brand-gold data-checked:bg-brand-gold data-checked:text-black dark:data-checked:border-brand-gold dark:data-checked:bg-brand-gold"
           />
           <Label htmlFor={`platform-${id}`} className="cursor-pointer font-normal">
             {PLATFORM_RULES[id].label}
