@@ -33,7 +33,8 @@ function platformBlock(ids: PlatformId[], postFormat: PostFormat | undefined): s
     .map((id) => {
       const r = PLATFORM_RULES[id];
       if (postFormat === "dark-post" && r.darkPostVisibleChars) {
-        return `- ${r.label} (${r.network} ad): HARD LIMIT of ${r.darkPostVisibleChars} characters for the ENTIRE caption. This is a dark post - there is no "see more" expansion to fall back on, so the whole caption (not just a preview/hook) must fit inside this limit. Up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
+        const elaboration = r.darkPostStyleNote ? ` ${r.darkPostStyleNote}` : "";
+        return `- ${r.label} (${r.network} ad): HARD LIMIT of ${r.darkPostVisibleChars} characters for the ENTIRE caption. This is a dark post - there is no "see more" expansion to fall back on, so the whole caption (not just a preview/hook) must fit inside this limit.${elaboration} Up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
       }
       return `- ${r.label}: max ${r.maxChars} characters, ~${r.visibleChars} visible before feed truncation, up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
     })

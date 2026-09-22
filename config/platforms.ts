@@ -34,6 +34,14 @@ export interface PlatformRules {
    * verified ad-specific number.
    */
   darkPostVisibleChars?: number;
+  /**
+   * Extra style guidance layered on top of `styleGuidance` specifically for
+   * a dark post (any objective) - e.g. Meta ads should read a touch more
+   * developed/elaborated even within the tight character limit, while a
+   * platform with no note here (TikTok) keeps its normal dark-post style
+   * unchanged.
+   */
+  darkPostStyleNote?: string;
   /** Recommended max hashtags for this app's output (style guidance, not a platform hard cap unless noted). */
   maxHashtags: number;
   /** Short style guidance injected into the system prompt. */
@@ -53,6 +61,8 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     visibleChars: 125,
     // Meta (Instagram/Facebook) ads: 125 chars of primary text visible before truncation.
     darkPostVisibleChars: 125,
+    darkPostStyleNote:
+      "Let this read as a slightly more developed, fuller sentence rather than a clipped one-liner - still concise and within the character limit, just not maximally terse. Always ground this in the client's established brand tone of voice (from their brand profile/brand book) precisely if one is provided; if not, keep this warmer, fuller feel while staying true to the creative.",
     maxHashtags: 5,
     styleGuidance:
       "Put the hook / key message in the first line so it survives feed truncation. Conversational, can use emoji sparingly. Hashtags at the end, max 5, specific and relevant (not generic spam tags).",
@@ -84,6 +94,8 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     visibleChars: 250,
     // Meta (Instagram/Facebook) ads: 125 chars of primary text visible before truncation.
     darkPostVisibleChars: 125,
+    darkPostStyleNote:
+      "Let this read as a slightly more developed, fuller sentence rather than a clipped one-liner - still concise and within the character limit, just not maximally terse. Always ground this in the client's established brand tone of voice (from their brand profile/brand book) precisely if one is provided; if not, keep this warmer, fuller feel while staying true to the creative.",
     maxHashtags: 2,
     styleGuidance:
       "Conversational, minimal or no hashtags (at most 1-2 if genuinely relevant). Fine to be a bit longer/storytelling, but keep the key point in the first sentence or two before the 'See more' fold.",

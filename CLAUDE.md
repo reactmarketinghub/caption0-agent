@@ -244,6 +244,16 @@ LinkedIn currently), dark-post generations just fall back to the organic
 `visibleChars` number. Currently verified: Meta (Instagram/Facebook) ads at
 125 chars, TikTok ads at 100 chars.
 
+`darkPostStyleNote` is extra style guidance appended only for a dark post
+(any objective, traffic or awareness) - currently set on Instagram and
+Facebook so Meta dark posts read a touch more developed/elaborated within
+the tight character limit rather than maximally clipped ad-speak, while
+also reinforcing that this should still be grounded in the client's brand
+tone of voice/brand book precisely if one's on file. TikTok has no note
+set, so its dark-post style is intentionally unchanged from before -
+leave it unset for a platform whenever "make dark posts sound different"
+shouldn't apply there.
+
 `network` labels which ad network's dark-post limits a platform shares
 (Instagram and Facebook both run under `"Meta"`) - `CaptionVariantCard`
 shows it as a small badge on every result so it's clear at a glance which
