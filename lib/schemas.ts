@@ -77,8 +77,10 @@ export type GenerationResponse = z.infer<typeof generationResponseSchema>;
 /** Request body for POST /api/generate. */
 export const generateRequestSchema = z.object({
   clientId: z.string().optional(),
-  postFormat: postFormatSchema,
-  objective: objectiveSchema,
+  /** Left unset ("Not sure" in the UI), Claude infers this from the creative. */
+  postFormat: postFormatSchema.optional(),
+  /** Left unset ("Not sure" in the UI), Claude infers this from the creative. */
+  objective: objectiveSchema.optional(),
   platforms: z.array(platformIdSchema).min(1),
   creativeType: z.enum(["static", "carousel", "video"]),
   /** data URLs or Blob URLs for images (static: 1, carousel: many, video: extracted frames) */
@@ -91,8 +93,8 @@ export type GenerateRequest = z.infer<typeof generateRequestSchema>;
 /** Refine/regenerate a single variant. */
 export const refineRequestSchema = z.object({
   clientId: z.string().optional(),
-  postFormat: postFormatSchema,
-  objective: objectiveSchema,
+  postFormat: postFormatSchema.optional(),
+  objective: objectiveSchema.optional(),
   platform: platformIdSchema,
   creativeType: z.enum(["static", "carousel", "video"]),
   images: z.array(z.string()).min(1),

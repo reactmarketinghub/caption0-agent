@@ -126,8 +126,10 @@ export const NETWORK_PLATFORMS: Record<AdNetwork, PlatformId[]> = ALL_PLATFORM_I
  * The character limit that actually applies right now: the platform's hard
  * technical cap for a grid (organic) post, or the tighter ad primary-text
  * limit for a dark post (falling back to the hard cap when a platform has
- * no distinct, verified ad number).
+ * no distinct, verified ad number). When post format wasn't specified
+ * (left as "Not sure" in the UI), this conservatively uses the grid/hard-cap
+ * number, since we don't know which network's tighter ad limit would apply.
  */
-export function getEffectiveCharLimit(rules: PlatformRules, postFormat: PostFormat): number {
+export function getEffectiveCharLimit(rules: PlatformRules, postFormat: PostFormat | undefined): number {
   return postFormat === "dark-post" ? (rules.darkPostVisibleChars ?? rules.maxChars) : rules.maxChars;
 }

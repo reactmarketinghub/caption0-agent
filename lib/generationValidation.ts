@@ -10,7 +10,7 @@ import type { CaptionVariant, GenerationResponse } from "./schemas";
  */
 export function validateCaptionLength(
   platform: PlatformId,
-  postFormat: PostFormat,
+  postFormat: PostFormat | undefined,
   variant: CaptionVariant,
 ): string | null {
   const rules = PLATFORM_RULES[platform];
@@ -26,7 +26,10 @@ export function validateCaptionLength(
   return `The ${rules.label} caption is ${variant.char_count} characters, over the ${limit}-character hard limit for ${context}. Rewrite it to fit fully within the limit - the WHOLE caption, not just an opening hook - while keeping the same core message.`;
 }
 
-export function validateGenerationResponse(data: GenerationResponse, postFormat: PostFormat): string | null {
+export function validateGenerationResponse(
+  data: GenerationResponse,
+  postFormat: PostFormat | undefined,
+): string | null {
   const violations = data.platforms.flatMap((p) =>
     p.variants
       .map((v, i) => {

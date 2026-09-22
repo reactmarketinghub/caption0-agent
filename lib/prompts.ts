@@ -28,7 +28,7 @@ Rules for the JSON:
 - "hashtags" entries do not include the leading "#".
 - Do not wrap the JSON in \`\`\`.`;
 
-function platformBlock(ids: PlatformId[], postFormat: PostFormat): string {
+function platformBlock(ids: PlatformId[], postFormat: PostFormat | undefined): string {
   return ids
     .map((id) => {
       const r = PLATFORM_RULES[id];
@@ -71,8 +71,10 @@ function brandVoiceBlock(profile?: BrandProfile | null): string {
 
 export interface BuildSystemPromptArgs {
   profile?: BrandProfile | null;
-  postFormat: PostFormat;
-  objective: Objective;
+  /** Left unset ("Not sure" in the UI) - Claude infers it from the creative instead. */
+  postFormat?: PostFormat;
+  /** Left unset ("Not sure" in the UI) - Claude infers it from the creative instead. */
+  objective?: Objective;
   platforms: PlatformId[];
   creativeType: "static" | "carousel" | "video";
   /** Cheap pixel-based heuristic flag (fast cuts or a static talking-head shot) - see lib/client/extractVideoFrames.ts. */
@@ -91,8 +93,12 @@ export function buildSystemPrompt({
     `You are a senior social media copywriter at a marketing agency, writing ready-to-post captions for a client's social channels.`,
     brandVoiceBlock(profile),
     `Platforms requested (per-platform rules):\n${platformBlock(platforms, postFormat)}`,
-    `Post format: ${POST_FORMAT_RULES[postFormat].label}. ${POST_FORMAT_RULES[postFormat].styleGuidance}`,
-    `Campaign objective: ${OBJECTIVE_RULES[objective].label}. ${OBJECTIVE_RULES[objective].styleGuidance}`,
+    postFormat
+      ? `Post format: ${POST_FORMAT_RULES[postFormat].label}. ${POST_FORMAT_RULES[postFormat].styleGuidance}`
+      : `Post format wasn't specified - infer from the creative and any visible context whether this reads more like an organic grid post (native, on-brand feel, matches the account's usual voice) or a paid dark-post ad (no public grid to worry about, fine to be more direct/CTA-forward), and match tone accordingly.`,
+    objective
+      ? `Campaign objective: ${OBJECTIVE_RULES[objective].label}. ${OBJECTIVE_RULES[objective].styleGuidance}`
+      : `Objective wasn't specified - infer from the creative whether this is more about driving clicks/traffic (lead with a direct call-to-action) or building awareness/recall (no hard sell, focus on story/feeling), and match tone accordingly.`,
   ];
 
   if (creativeType === "carousel") {

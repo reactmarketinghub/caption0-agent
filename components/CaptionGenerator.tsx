@@ -19,8 +19,8 @@ export function CaptionGenerator() {
   const [creativeType, setCreativeType] = useState<CreativeType | null>(null);
   const [assets, setAssets] = useState<CreativeAsset[]>([]);
   const [looksVoHeavy, setLooksVoHeavy] = useState(false);
-  const [postFormat, setPostFormat] = useState<PostFormat>("grid");
-  const [objective, setObjective] = useState<Objective>("traffic");
+  const [postFormat, setPostFormat] = useState<PostFormat | null>(null);
+  const [objective, setObjective] = useState<Objective | null>(null);
   const [platforms, setPlatforms] = useState<PlatformId[]>(ALL_PLATFORM_IDS);
   const [results, setResults] = useState<GenerationResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,8 +58,8 @@ export function CaptionGenerator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientId: clientId ?? undefined,
-          postFormat,
-          objective,
+          postFormat: postFormat ?? undefined,
+          objective: objective ?? undefined,
           platforms,
           creativeType,
           images: assets.map((a) => a.dataUrl),
@@ -78,8 +78,8 @@ export function CaptionGenerator() {
 
   const refineContext = {
     clientId: clientId ?? undefined,
-    postFormat,
-    objective,
+    postFormat: postFormat ?? undefined,
+    objective: objective ?? undefined,
     creativeType: creativeType ?? "static",
     images: assets.map((a) => a.dataUrl),
   };

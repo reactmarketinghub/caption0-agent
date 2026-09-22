@@ -94,9 +94,9 @@ standing requirement, not a one-off tweak.
 
 ### Post format & objective
 
-Two required controls sit next to the platform checkboxes, both driven by
-`config/objectives.ts` (edit that file to add/reword options - no other code
-changes needed) and both folded into the system prompt in
+Two **optional** controls sit next to the platform checkboxes, both driven
+by `config/objectives.ts` (edit that file to add/reword options - no other
+code changes needed) and both folded into the system prompt in
 `buildSystemPrompt()`:
 
 - **Post format** - `grid` (organic, will appear on the client's public
@@ -104,6 +104,16 @@ changes needed) and both folded into the system prompt in
   will never appear on the grid - fine to be more direct/CTA-forward).
 - **Objective** - `traffic` (optimize for a click/visit, direct CTA) vs
   `awareness` (optimize for recall/affinity, no hard sell).
+
+Both default to **"Not sure"** (`null` in the UI, `undefined` on the wire) -
+neither is required. Left unset, `buildSystemPrompt()` swaps in an "infer
+this from the creative" instruction instead of the fixed rule for that
+control, same pattern as the no-brand-profile "infer the tone" fallback.
+`getEffectiveCharLimit()` treats an unset post format the same as `grid`
+(the platform's organic/hard-cap number) for character-limit purposes,
+since we can't know which network's tighter dark-post limit would apply
+without a chosen format - this is the conservative choice, not a guess at
+intent.
 
 ## Server component pages reading live KV data must opt out of static caching
 
