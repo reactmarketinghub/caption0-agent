@@ -1,6 +1,9 @@
 "use client";
 
-const FRAME_COUNT = 7; // within the 6-8 spec range
+const FRAME_COUNT = 7; // final frames sent to Claude, within the 6-8 spec range
+// Cheap low-res probes (see grayscaleSignature) used only to find where the
+// video actually changes - not sent to Claude and not part of FRAME_COUNT.
+const PROBE_COUNT = 16;
 const HOOK_TIMESTAMP_SEC = 0.5;
 const TINY_SIZE = 24; // for cheap frame-diff heuristic
 
@@ -25,24 +28,86 @@ export interface VideoFrameExtractionResult {
   durationSec: number;
 }
 
-function buildTimestamps(duration: number): number[] {
-  const hook = Math.min(HOOK_TIMESTAMP_SEC, Math.max(0, duration - 0.05));
-  const remaining = FRAME_COUNT - 1;
+function evenlySpaced(count: number, duration: number): number[] {
   const margin = duration * 0.03;
-  const rest: number[] = [];
-  for (let i = 0; i < remaining; i++) {
-    const t = margin + (i / (remaining - 1 || 1)) * (duration - margin * 2);
-    rest.push(Math.min(Math.max(t, 0), duration));
+  const usable = Math.max(duration - margin * 2, 0);
+  const points: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const t = margin + (i / (count - 1 || 1)) * usable;
+    points.push(Math.min(Math.max(t, 0), duration));
   }
-  const all = [hook, ...rest].sort((a, b) => a - b);
-  // de-dupe near-identical timestamps (short videos)
-  const deduped: number[] = [];
-  for (const t of all) {
-    if (deduped.length === 0 || t - deduped[deduped.length - 1] > 0.05) {
-      deduped.push(t);
+  return points;
+}
+
+function dedupeSorted(timestamps: number[], minGapSec: number): number[] {
+  const sorted = [...timestamps].sort((a, b) => a - b);
+  const result: number[] = [];
+  for (const t of sorted) {
+    if (result.length === 0 || t - result[result.length - 1] > minGapSec) {
+      result.push(t);
     }
   }
-  return deduped;
+  return result;
+}
+
+/**
+ * Picks which FRAME_COUNT timestamps to actually send to Claude, biased
+ * toward where the video visually changes (cuts, new shots) rather than a
+ * fixed offset that might land mid-static-shot right next to an actual cut.
+ * `probeSignatures[i]` must correspond to `probeTimestamps[i]`.
+ *
+ * Coverage is guaranteed by construction, not by a greedy fallback: after
+ * the hook, the probed range is split into FRAME_COUNT-1 equal-duration
+ * buckets spanning the whole video, and each bucket contributes whichever
+ * of its own probes differs most from the probe before it. A video with no
+ * real cuts (a locked-off static shot) still gets one frame per bucket,
+ * same as the old uniform sampling; a video with real cuts gets each
+ * bucket's frame pulled toward its nearest cut instead of an arbitrary
+ * offset. (An earlier version ranked all probes by activity globally and
+ * tie-broke by chronological order, which let a handful of early, equally
+ * "inactive" probes fill the whole quota and left most of the video
+ * unsampled - the per-bucket split can't do that, since every bucket is
+ * guaranteed exactly one pick.)
+ */
+function pickSceneAwareTimestamps(
+  duration: number,
+  probeTimestamps: number[],
+  probeSignatures: number[][],
+): number[] {
+  const hook = Math.min(HOOK_TIMESTAMP_SEC, Math.max(0, duration - 0.05));
+  if (probeTimestamps.length === 0) return [hook];
+
+  // Activity = how much a probe differs from the one right before it.
+  const activity = probeTimestamps.map((_, i) =>
+    i === 0 ? 0 : meanAbsDiff(probeSignatures[i - 1], probeSignatures[i]),
+  );
+
+  const remainingSlots = FRAME_COUNT - 1;
+  const rangeStart = probeTimestamps[0];
+  const rangeEnd = probeTimestamps[probeTimestamps.length - 1];
+  const bucketEdges = Array.from(
+    { length: remainingSlots + 1 },
+    (_, i) => rangeStart + ((rangeEnd - rangeStart) * i) / remainingSlots,
+  );
+
+  const picks: number[] = [];
+  for (let b = 0; b < remainingSlots; b++) {
+    const lo = bucketEdges[b];
+    const hi = bucketEdges[b + 1];
+    let bestT: number | null = null;
+    let bestScore = -1;
+    for (let i = 0; i < probeTimestamps.length; i++) {
+      const t = probeTimestamps[i];
+      if (t < lo || t > hi) continue;
+      if (activity[i] > bestScore) {
+        bestScore = activity[i];
+        bestT = t;
+      }
+    }
+    picks.push(bestT ?? (lo + hi) / 2);
+  }
+
+  return dedupeSorted([hook, ...picks], 0.05).slice(0, FRAME_COUNT);
 }
 
 function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
@@ -86,11 +151,18 @@ function meanAbsDiff(a: number[], b: number[]): number {
 }
 
 /**
- * Extracts 6-8 evenly spaced frames from a video file (always including a
+ * Extracts up to FRAME_COUNT frames from a video file (always including a
  * ~0.5s "hook" frame), resized/encoded the same way as static images, plus a
  * cheap heuristic guess at whether the video looks VO-heavy (see threshold
  * comments above). Everything runs in the browser; the raw video is never
  * uploaded for this step.
+ *
+ * Two passes: first a cheap low-res probe pass across the whole video to
+ * find where it actually changes (scene cuts) vs. where it's static, then a
+ * second pass that seeks to only the chosen timestamps to capture the real
+ * frames - so the extra probing cost stays small (tiny 24x24 reads) while
+ * the frames actually sent to Claude land where the content changes instead
+ * of an arbitrary uniform grid.
  */
 export async function extractVideoFrames(file: File): Promise<VideoFrameExtractionResult> {
   const { resizeCanvasSource } = await import("./resizeImage");
@@ -111,11 +183,18 @@ export async function extractVideoFrames(file: File): Promise<VideoFrameExtracti
     });
 
     const duration = video.duration || 0;
-    const timestamps = buildTimestamps(duration);
+
+    const probeTimestamps = evenlySpaced(PROBE_COUNT, duration);
+    const probeSignatures: number[][] = [];
+    for (const t of probeTimestamps) {
+      await seekTo(video, t);
+      probeSignatures.push(grayscaleSignature(video));
+    }
+
+    const timestamps = pickSceneAwareTimestamps(duration, probeTimestamps, probeSignatures);
 
     const frames: ExtractedFrame[] = [];
     const signatures: number[][] = [];
-
     for (const t of timestamps) {
       await seekTo(video, t);
       const dataUrl = resizeCanvasSource(video, video.videoWidth, video.videoHeight);

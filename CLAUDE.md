@@ -310,6 +310,28 @@ conservative, since it's flagged there but not surfaced as a manual
 brief-me nudge (there's no brief field). Tune `FAST_CUT_THRESHOLD` /
 `STATIC_SHOT_THRESHOLD` after looking at real client videos.
 
+**Frame selection is scene-aware, not a fixed uniform grid.** Extraction is
+two passes: first a cheap low-res probe pass (`PROBE_COUNT` = 16, tiny 24x24
+reads, same `grayscaleSignature()`/`meanAbsDiff()` used for the VO-heavy
+heuristic) samples evenly across the whole video, then `pickSceneAwareTimestamps()`
+splits that probed range into `FRAME_COUNT - 1` equal-duration buckets (plus
+the always-included ~0.5s hook) and has each bucket contribute whichever of
+its own probes differs most from the probe right before it - so a real cut
+gets captured precisely instead of landing between two uniform-grid frames,
+while a locked-off static shot still gets one frame per bucket exactly like
+the old uniform sampling did. A second pass then seeks only to those chosen
+timestamps to capture the real frames actually sent to Claude. Coverage of
+the full video is guaranteed by construction (one pick per bucket, buckets
+span the whole duration) - an earlier draft instead globally ranked every
+probe by activity and tie-broke by chronological order, which let a run of
+equally-"inactive" early probes silently fill the whole frame quota and
+leave most of the video unsampled whenever there wasn't a strong dominant
+cut (verified wrong with a synthetic static-video test before shipping the
+bucketed version instead). `PROBE_COUNT` is a starting point like the VO-heavy
+thresholds above - raise it if per-bucket resolution looks too coarse on
+real videos, at the cost of more seeks (16 probes + up to 7 final frames
+per upload today).
+
 **Frames are labeled with their timestamp, not sent as a bare image stack.**
 Each extracted frame already carried a `timestampSec` client-side
 (`lib/client/extractVideoFrames.ts`), but it never reached Claude - frames
