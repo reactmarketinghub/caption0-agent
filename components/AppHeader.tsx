@@ -18,8 +18,10 @@ export async function AppHeader() {
             className="h-5 w-auto dark:invert"
             priority
           />
-          <span className="h-4 w-px bg-border" aria-hidden />
-          <span className="text-[15px] font-bold tracking-tight">Caption Generator</span>
+          <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
+          <span className="hidden text-[15px] font-bold tracking-tight sm:inline">
+            Caption Generator
+          </span>
         </Link>
         <nav className="flex items-center gap-4 text-sm font-medium">
           <Link href="/" className="text-foreground/70 transition-colors hover:text-primary">

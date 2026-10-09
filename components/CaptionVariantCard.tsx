@@ -94,7 +94,11 @@ export function CaptionVariantCard({
           </span>
         </div>
       </div>
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      )}
       <div className="flex flex-wrap gap-2 pt-1">
         <Button size="sm" variant="outline" onClick={handleCopy}>
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}

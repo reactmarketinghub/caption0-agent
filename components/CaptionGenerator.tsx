@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, RotateCcw, Film } from "lucide-react";
+import { Loader2, RotateCcw, Film, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UploadZone, type UploadResult } from "./UploadZone";
 import { CarouselThumbnails } from "./CarouselThumbnails";
 import { ClientSelector } from "./ClientSelector";
@@ -13,6 +14,12 @@ import { ALL_PLATFORM_IDS, type PlatformId } from "@/config/platforms";
 import type { PostFormat, Objective } from "@/config/objectives";
 import type { CreativeAsset, CreativeType } from "@/lib/client/creativeAsset";
 import type { BrandProfile, GenerationResponse } from "@/lib/schemas";
+
+const CREATIVE_TYPE_LABELS: Record<CreativeType, string> = {
+  static: "Image",
+  carousel: "Carousel",
+  video: "Video",
+};
 
 export function CaptionGenerator() {
   const [clientId, setClientId] = useState<string | null>(null);
@@ -107,7 +114,9 @@ export function CaptionGenerator() {
       ) : (
         <div className="space-y-4 rounded-xl border p-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium capitalize">{creativeType} creative loaded</span>
+            <span className="text-sm font-medium">
+              {CREATIVE_TYPE_LABELS[creativeType ?? "static"]} loaded
+            </span>
             <Button variant="ghost" size="sm" onClick={handleReset}>
               <RotateCcw className="h-3.5 w-3.5" />
               Start over
@@ -123,12 +132,14 @@ export function CaptionGenerator() {
           )}
 
           {creativeType === "static" && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={assets[0].dataUrl}
-              alt="Creative preview"
-              className="h-48 w-auto rounded-lg border object-contain"
-            />
+            <div className="flex justify-center rounded-lg border bg-muted p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={assets[0].dataUrl}
+                alt="Creative preview"
+                className="h-64 max-w-full rounded object-contain sm:h-80"
+              />
+            </div>
           )}
 
           {creativeType === "video" && (
@@ -175,7 +186,12 @@ export function CaptionGenerator() {
         Generate captions
       </Button>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       {results && (
         <CaptionResults

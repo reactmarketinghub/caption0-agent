@@ -11,6 +11,7 @@ import {
   UploadCloud,
   CheckCircle2,
   XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BrandKitSection } from "@/components/BrandKitSection";
 import { uploadBrandDocFile } from "@/lib/client/uploadBrandDocFile";
 import { cn } from "@/lib/utils";
@@ -525,7 +527,12 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
         )}
       </Card>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="flex items-center justify-between border-t pt-6">
         <Button onClick={handleSave} disabled={saving} size="lg">

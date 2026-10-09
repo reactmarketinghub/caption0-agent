@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { UploadCloud, Loader2 } from "lucide-react";
+import { UploadCloud, Loader2, AlertCircle } from "lucide-react";
 import { resizeImageFile } from "@/lib/client/resizeImage";
 import { extractVideoFrames } from "@/lib/client/extractVideoFrames";
 import { uploadOriginalToBlob } from "@/lib/client/uploadToBlob";
 import type { CreativeAsset, CreativeType } from "@/lib/client/creativeAsset";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -146,7 +147,12 @@ export function UploadZone({ onLoaded, disabled }: UploadZoneProps) {
           }}
         />
       </div>
-      {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <Alert variant="destructive" className="mt-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }

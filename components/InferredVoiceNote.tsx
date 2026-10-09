@@ -82,7 +82,11 @@ export function InferredVoiceNote({ inferredVoice, onSavedDraft }: InferredVoice
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Save
             </Button>
-            {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
+            {error && (
+              <span role="alert" className="text-xs text-red-600 dark:text-red-400">
+                {error}
+              </span>
+            )}
           </div>
         ) : (
           <Button size="sm" variant="outline" onClick={() => setShowForm(true)}>
