@@ -2,7 +2,7 @@
  * Per-platform caption rules used to build prompts, render limits in the UI,
  * and validate/warn on generated output.
  *
- * IMPORTANT: platform character/hashtag conventions change. Before relying on
+ * IMPORTANT: platform character limit conventions change. Before relying on
  * these in production, re-verify against each platform's current help docs
  * and update `lastVerified`.
  */
@@ -42,8 +42,6 @@ export interface PlatformRules {
    * unchanged.
    */
   darkPostStyleNote?: string;
-  /** Recommended max hashtags for this app's output (style guidance, not a platform hard cap unless noted). */
-  maxHashtags: number;
   /** Short style guidance injected into the system prompt. */
   styleGuidance: string;
   /** ISO date this platform's limits were last checked against official docs / current sources. */
@@ -55,7 +53,7 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     id: "instagram",
     label: "Instagram",
     network: "Meta",
-    // 2,200 char hard cap; hashtags count toward this limit.
+    // 2,200 char hard cap.
     maxChars: 2200,
     // ~125 chars show before "... more" in feed.
     visibleChars: 125,
@@ -63,9 +61,8 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     darkPostVisibleChars: 125,
     darkPostStyleNote:
       "Let this read as a slightly more developed, fuller sentence rather than a clipped one-liner - still concise and within the character limit, just not maximally terse. Always ground this in the client's established brand tone of voice (from their brand profile/brand book) precisely if one is provided; if not, keep this warmer, fuller feel while staying true to the creative.",
-    maxHashtags: 5,
     styleGuidance:
-      "Put the hook / key message in the first line so it survives feed truncation. Conversational, can use emoji sparingly. Hashtags at the end, max 5, specific and relevant (not generic spam tags).",
+      "Put the hook / key message in the first line so it survives feed truncation. Conversational, can use emoji sparingly.",
     lastVerified: "2026-09-21",
   },
   tiktok: {
@@ -79,9 +76,8 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     visibleChars: 100,
     // TikTok ads: 100 chars of primary text visible before truncation.
     darkPostVisibleChars: 100,
-    maxHashtags: 5,
     styleGuidance:
-      "Short, punchy, conversational, written like a comment not an ad. Front-load the hook. Use keyword-rich phrasing (TikTok search relies on caption text), max 5 hashtags mixing a niche tag with broader ones.",
+      "Short, punchy, conversational, written like a comment not an ad. Front-load the hook. Use keyword-rich phrasing (TikTok search relies on caption text).",
     lastVerified: "2026-09-21",
   },
   facebook: {
@@ -96,9 +92,8 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     darkPostVisibleChars: 125,
     darkPostStyleNote:
       "Let this read as a slightly more developed, fuller sentence rather than a clipped one-liner - still concise and within the character limit, just not maximally terse. Always ground this in the client's established brand tone of voice (from their brand profile/brand book) precisely if one is provided; if not, keep this warmer, fuller feel while staying true to the creative.",
-    maxHashtags: 2,
     styleGuidance:
-      "Conversational, minimal or no hashtags (at most 1-2 if genuinely relevant). Fine to be a bit longer/storytelling, but keep the key point in the first sentence or two before the 'See more' fold.",
+      "Conversational. Fine to be a bit longer/storytelling, but keep the key point in the first sentence or two before the 'See more' fold.",
     lastVerified: "2026-09-21",
   },
   linkedin: {
@@ -108,9 +103,8 @@ export const PLATFORM_RULES: Record<PlatformId, PlatformRules> = {
     maxChars: 3000,
     // ~210 chars visible on desktop, ~140 on mobile before "see more".
     visibleChars: 210,
-    maxHashtags: 5,
     styleGuidance:
-      "Professional but human tone, no salesy hype. Use line breaks between short paragraphs for readability. 3-5 relevant hashtags at the end, no hashtag stuffing.",
+      "Professional but human tone, no salesy hype. Use line breaks between short paragraphs for readability.",
     lastVerified: "2026-09-17",
   },
 };
@@ -122,8 +116,8 @@ export const ALL_NETWORKS: AdNetwork[] = ["Meta", "TikTok", "LinkedIn"];
 /**
  * Platform selection in the UI is grouped by ad network, not by individual
  * platform - Meta always means Instagram + Facebook together (one caption
- * per platform is still generated, tuned to each platform's own hashtag/
- * style rules, but you can't select one without the other).
+ * per platform is still generated, tuned to each platform's own style
+ * rules, but you can't select one without the other).
  */
 export const NETWORK_PLATFORMS: Record<AdNetwork, PlatformId[]> = ALL_PLATFORM_IDS.reduce(
   (acc, id) => {

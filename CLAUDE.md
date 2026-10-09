@@ -178,8 +178,8 @@ a live deployment.
 
 `BrandProfile` holds one brand-voice document's worth of structured fields
 (tone, do's/don'ts, banned words, **keywords** - product names/taglines/
-search-relevant terms Claude should weave in where natural, emoji/hashtag
-rules, CTA style, example captions) - not free-form file attachments. For
+search-relevant terms Claude should weave in where natural, emoji rules,
+CTA style, example captions) - not free-form file attachments. For
 reference material you want the team to see but that isn't meant to shape
 every generation (logos, fonts, full guideline PDFs for human reference),
 use Brand kit files below instead.
@@ -223,7 +223,7 @@ file is a PDF/PPTX/DOCX/TXT (checked via `isAutoExtractableDoc()` in
 `/api/clients/[id]/brand-kit` automatically runs it through the same
 extraction pipeline as the "Import from files" flow and merges the result
 into the profile with `mergeExtractedIntoProfile()` - blank single-value
-fields (tone, emoji/hashtag rules, CTA style) get filled in, list fields
+fields (tone, emoji rules, CTA style) get filled in, list fields
 (do's/don'ts/banned words/keywords/example captions) get unioned in, and
 nothing a human already typed is overwritten. That merged profile is what
 `brandVoiceBlock()` injects into every future generation for this client -
@@ -236,11 +236,11 @@ trigger extraction.
 ## How to update platform rules
 
 Edit `config/platforms.ts` only - nothing else needs to change. Each entry
-has `maxChars`, `visibleChars` (before organic/grid feed truncation),
-`maxHashtags`, a `styleGuidance` string injected into the prompt, and a
-`lastVerified` date. **Re-verify against each platform's current help docs
-before changing numbers** - these change over time and this file is the
-single source of truth for both the prompt and the UI's over-limit warnings.
+has `maxChars`, `visibleChars` (before organic/grid feed truncation), a
+`styleGuidance` string injected into the prompt, and a `lastVerified` date.
+**Re-verify against each platform's current help docs before changing
+numbers** - these change over time and this file is the single source of
+truth for both the prompt and the UI's over-limit warnings.
 
 `darkPostVisibleChars` is the same idea as `visibleChars` but for the ad
 primary-text truncation point when Post format is set to "Dark post" -
@@ -279,8 +279,8 @@ in `PlatformCheckboxes.tsx` iterate `ALL_NETWORKS` ("Meta", "TikTok",
 `ALL_PLATFORM_IDS` - checking "Meta" always selects Instagram *and*
 Facebook together (you can't pick one without the other), since that's how
 ad ops actually thinks about a Meta post. A caption is still generated per
-individual platform under the hood (each with its own hashtag/style rules),
-this only changes the selection granularity in the UI.
+individual platform under the hood (each with its own style rules), this
+only changes the selection granularity in the UI.
 
 **Character limits are enforced, not just displayed.** `lib/
 generationValidation.ts` (`validateGenerationResponse` for `/api/generate`,
@@ -403,6 +403,22 @@ search tool calls, `extractText()` in `lib/claudeGenerate.ts` was changed to
 read only the *last* text block instead of joining every text block - with no
 tools involved (e.g. `/api/refine`, brand-doc extraction) this is identical
 to the old behavior, since there's normally just one text block.
+
+## Hashtags are not generated - this is intentional, by request
+
+At the team's request, this app does not generate or display hashtags
+anywhere, period - not as a per-generation option, just removed outright.
+`captionVariantSchema` in `lib/schemas.ts` no longer has a `hashtags` field,
+`buildSystemPrompt()` appends a standing `NO_HASHTAGS_GUIDANCE` instruction
+telling Claude not to include any, and `PlatformRules` in
+`config/platforms.ts` no longer carries a `maxHashtags` number (each
+platform's `styleGuidance` had its hashtag-count advice removed too). The
+brand profile's old `hashtagRules` free-text field is gone the same way -
+from the schema, the admin form, and brand-doc extraction - since there's
+nothing left for it to configure. If hashtags come back later as a
+deliberate, user-controlled feature (not just "always on" like before),
+treat that as new scope - re-add a schema field and UI control rather than
+assuming the old `hashtagRules`/`maxHashtags` shape is still the right one.
 
 ## Local development
 

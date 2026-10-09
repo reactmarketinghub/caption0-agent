@@ -27,20 +27,15 @@ export function CaptionVariantCard({
   const rules = PLATFORM_RULES[platform];
   const isDarkPost = refineContext.postFormat === "dark-post";
 
-  const fullText = [variant.caption, variant.hashtags.map((h) => `#${h}`).join(" ")]
-    .filter(Boolean)
-    .join("\n\n");
-
   // A dark post (ad) truncates its primary text much tighter than the
   // platform's hard character cap - flag against that limit instead when
   // it's an ad, since that's the number that actually matters here.
   const displayLimit = getEffectiveCharLimit(rules, refineContext.postFormat);
   const limitLabel = isDarkPost ? "chars (ad limit)" : "chars";
   const overLimit = variant.char_count > displayLimit;
-  const overHashtags = variant.hashtags.length > rules.maxHashtags;
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(fullText);
+    await navigator.clipboard.writeText(variant.caption);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -72,25 +67,12 @@ export function CaptionVariantCard({
   return (
     <div className="rounded-lg border p-4 space-y-3">
       <p className="whitespace-pre-wrap text-sm">{variant.caption}</p>
-      {variant.hashtags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {variant.hashtags.map((tag) => (
-            <Badge key={tag} variant="secondary">
-              #{tag}
-            </Badge>
-          ))}
-        </div>
-      )}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex flex-wrap items-center gap-3">
           <Badge variant="outline">{rules.network}</Badge>
           <span className={cn(overLimit && "font-medium text-red-600 dark:text-red-400")}>
             {variant.char_count.toLocaleString()} / {displayLimit.toLocaleString()} {limitLabel}
             {overLimit ? " - over limit!" : ""}
-          </span>
-          <span className={cn(overHashtags && "font-medium text-red-600 dark:text-red-400")}>
-            {variant.hashtags.length} / {rules.maxHashtags} hashtags
-            {overHashtags ? " - too many!" : ""}
           </span>
         </div>
       </div>

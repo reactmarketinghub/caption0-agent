@@ -44,7 +44,6 @@ export function mergeExtractedIntoProfile(
     bannedWords: dedupe(existing.bannedWords, extracted.bannedWords),
     keywords: dedupe(existing.keywords, extracted.keywords),
     emojiRules: existing.emojiRules || extracted.emojiRules,
-    hashtagRules: existing.hashtagRules || extracted.hashtagRules,
     ctaStyle: existing.ctaStyle || extracted.ctaStyle,
     exampleCaptions: dedupe(existing.exampleCaptions, extracted.exampleCaptions).slice(0, 10),
     updatedAt: new Date().toISOString(),

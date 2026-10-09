@@ -14,6 +14,8 @@ const CREATIVE_VARIETY_GUIDANCE = `Be genuinely creative - don't default to the 
 - The 3 variants for a given platform must take genuinely different creative angles from each other, not the same idea reworded. Draw from distinct angle types - e.g. a direct product/claim-led angle, an emotional/lifestyle/story angle, a curiosity or question-led hook, a social-proof or community angle, a playful/observational angle, a behind-the-scenes or process angle - and use a claim-led angle in at most one variant, if any.
 - Actually analyze this specific creative, the brand profile, and (when you used it) anything you found via search, before deciding each variant's angle - don't reach for the first available claim or keyword by reflex. A caption that could run unchanged under a different photo from this client didn't do its job.`;
 
+const NO_HASHTAGS_GUIDANCE = `Do not include hashtags anywhere in any caption - no leading "#" tokens, no trailing hashtag block. Write every caption as plain, hashtag-free copy.`;
+
 const JSON_CONTRACT = `Return ONLY strict JSON matching this exact shape, no markdown fences, no commentary:
 {
   "inferred_voice"?: string,   // include ONLY if no brand profile was given
@@ -21,7 +23,7 @@ const JSON_CONTRACT = `Return ONLY strict JSON matching this exact shape, no mar
     {
       "platform": "instagram" | "tiktok" | "facebook" | "linkedin",
       "variants": [
-        { "caption": string, "hashtags": string[], "char_count": number, "angle": string }
+        { "caption": string, "char_count": number, "angle": string }
       ]
     }
   ]
@@ -29,8 +31,7 @@ const JSON_CONTRACT = `Return ONLY strict JSON matching this exact shape, no mar
 Rules for the JSON:
 - Include exactly one entry in "platforms" for each requested platform, in the order requested.
 - Each platform must have exactly 3 variants.
-- "char_count" is the character count of "caption" (including any inline hashtags you put in the caption body, but hashtags listed separately in "hashtags" should NOT be double counted unless they also appear in the caption text).
-- "hashtags" entries do not include the leading "#".
+- "char_count" is the character count of "caption".
 - "angle" is a short 3-8 word internal label naming this variant's creative angle (e.g. "founder story hook", "customer social-proof", "playful observational humor", "direct product claim") - never shown to the end user, used only to track variety over time.
 - Do not wrap the JSON in \`\`\`.`;
 
@@ -40,9 +41,9 @@ function platformBlock(ids: PlatformId[], postFormat: PostFormat | undefined): s
       const r = PLATFORM_RULES[id];
       if (postFormat === "dark-post" && r.darkPostVisibleChars) {
         const elaboration = r.darkPostStyleNote ? ` ${r.darkPostStyleNote}` : "";
-        return `- ${r.label} (${r.network} ad): HARD LIMIT of ${r.darkPostVisibleChars} characters for the ENTIRE caption. This is a dark post - there is no "see more" expansion to fall back on, so the whole caption (not just a preview/hook) must fit inside this limit.${elaboration} Up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
+        return `- ${r.label} (${r.network} ad): HARD LIMIT of ${r.darkPostVisibleChars} characters for the ENTIRE caption. This is a dark post - there is no "see more" expansion to fall back on, so the whole caption (not just a preview/hook) must fit inside this limit.${elaboration} ${r.styleGuidance}`;
       }
-      return `- ${r.label}: max ${r.maxChars} characters, ~${r.visibleChars} visible before feed truncation, up to ${r.maxHashtags} hashtags. ${r.styleGuidance}`;
+      return `- ${r.label}: max ${r.maxChars} characters, ~${r.visibleChars} visible before feed truncation. ${r.styleGuidance}`;
     })
     .join("\n");
 }
@@ -68,7 +69,6 @@ function brandVoiceBlock(profile?: BrandProfile | null): string {
       `Brand/product keywords to weave in naturally where relevant (don't force all of them into every caption, and never at the expense of sounding natural): ${profile.keywords.join(", ")}`,
     );
   if (profile.emojiRules) lines.push(`Emoji rules: ${profile.emojiRules}`);
-  if (profile.hashtagRules) lines.push(`Hashtag rules: ${profile.hashtagRules}`);
   if (profile.ctaStyle) lines.push(`CTA style: ${profile.ctaStyle}`);
   if (profile.exampleCaptions.length) {
     lines.push(
@@ -154,6 +154,7 @@ export function buildSystemPrompt({
 
   parts.push(HUMAN_VOICE_GUIDANCE);
   parts.push(CREATIVE_VARIETY_GUIDANCE);
+  parts.push(NO_HASHTAGS_GUIDANCE);
 
   if (recentAngles && recentAngles.length) {
     parts.push(
@@ -181,7 +182,6 @@ const BRAND_DOC_JSON_CONTRACT = `Return ONLY strict JSON matching this exact sha
   "bannedWords": string[],
   "keywords": string[],
   "emojiRules": string,
-  "hashtagRules": string,
   "ctaStyle": string,
   "exampleCaptions": string[]
 }
@@ -192,7 +192,7 @@ const BRAND_DOC_JSON_CONTRACT = `Return ONLY strict JSON matching this exact sha
 export function buildBrandDocParseSystemPrompt(): string {
   return [
     `You are helping a social media agency turn a client's brand voice guidelines document into a structured brand profile used to prompt an AI copywriter later.`,
-    `Read the provided document text and extract only what it actually says - tone of voice, do's and don'ts, banned words/phrases, brand/product keywords, emoji rules, hashtag rules, CTA style, and any example captions included.`,
+    `Read the provided document text and extract only what it actually says - tone of voice, do's and don'ts, banned words/phrases, brand/product keywords, emoji rules, CTA style, and any example captions included.`,
     BRAND_DOC_JSON_CONTRACT,
   ].join("\n\n");
 }

@@ -76,7 +76,6 @@ interface FormState {
   bannedWords: string;
   keywords: string;
   emojiRules: string;
-  hashtagRules: string;
   ctaStyle: string;
   exampleCaptions: string;
 }
@@ -90,7 +89,6 @@ function toFormState(profile?: BrandProfile | null): FormState {
     bannedWords: fromLines(profile?.bannedWords ?? []),
     keywords: fromLines(profile?.keywords ?? []),
     emojiRules: profile?.emojiRules ?? "",
-    hashtagRules: profile?.hashtagRules ?? "",
     ctaStyle: profile?.ctaStyle ?? "",
     exampleCaptions: fromLines(profile?.exampleCaptions ?? []),
   };
@@ -105,7 +103,6 @@ function toInput(state: FormState, isDraft: boolean): BrandProfileInput {
     bannedWords: toLines(state.bannedWords),
     keywords: toLines(state.keywords),
     emojiRules: state.emojiRules.trim(),
-    hashtagRules: state.hashtagRules.trim(),
     ctaStyle: state.ctaStyle.trim(),
     exampleCaptions: toLines(state.exampleCaptions).slice(0, 10),
     isDraft,
@@ -143,7 +140,6 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
       bannedWords: result.bannedWords.length ? fromLines(result.bannedWords) : s.bannedWords,
       keywords: result.keywords.length ? fromLines(result.keywords) : s.keywords,
       emojiRules: result.emojiRules || s.emojiRules,
-      hashtagRules: result.hashtagRules || s.hashtagRules,
       ctaStyle: result.ctaStyle || s.ctaStyle,
       exampleCaptions: result.exampleCaptions.length
         ? fromLines(result.exampleCaptions)
@@ -488,23 +484,13 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
               onChange={(e) => set("keywords", e.target.value)}
             />
           </div>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="emojiRules">Emoji rules</Label>
-              <Input
-                id="emojiRules"
-                value={state.emojiRules}
-                onChange={(e) => set("emojiRules", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="hashtagRules">Hashtag rules</Label>
-              <Input
-                id="hashtagRules"
-                value={state.hashtagRules}
-                onChange={(e) => set("hashtagRules", e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="emojiRules">Emoji rules</Label>
+            <Input
+              id="emojiRules"
+              value={state.emojiRules}
+              onChange={(e) => set("emojiRules", e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="ctaStyle">CTA style</Label>

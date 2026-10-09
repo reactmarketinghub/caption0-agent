@@ -24,7 +24,6 @@ export const brandProfileSchema = z.object({
   donts: z.array(z.string()).default([]),
   bannedWords: z.array(z.string()).default([]),
   emojiRules: z.string().default(""),
-  hashtagRules: z.string().default(""),
   ctaStyle: z.string().default(""),
   /** Brand/product keywords or phrases Claude should weave in where natural (e.g. for SEO/search relevance). */
   keywords: z.array(z.string()).default([]),
@@ -57,7 +56,6 @@ export type BrandDocParseResult = z.infer<typeof brandDocParseResultSchema>;
 /** One caption variant for a platform. */
 export const captionVariantSchema = z.object({
   caption: z.string().min(1),
-  hashtags: z.array(z.string()).default([]),
   char_count: z.number().int().nonnegative(),
   /**
    * Internal bookkeeping only (never shown to the end user) - a short label

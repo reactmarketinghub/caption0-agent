@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     creativeType,
     videoLooksVoHeavy,
   });
-  const userText = `The current caption for this platform is:\n"""\n${currentCaption}\n"""\n${INSTRUCTION_TEXT[instruction]}\n\nReturn ONLY strict JSON of the shape { "variant": { "caption": string, "hashtags": string[], "char_count": number } }, no markdown fences.`;
+  const userText = `The current caption for this platform is:\n"""\n${currentCaption}\n"""\n${INSTRUCTION_TEXT[instruction]}\n\nReturn ONLY strict JSON of the shape { "variant": { "caption": string, "char_count": number } }, no markdown fences.`;
 
   try {
     const { data, usage } = await generateStructured({

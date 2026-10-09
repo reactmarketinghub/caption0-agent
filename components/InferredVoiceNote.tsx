@@ -35,7 +35,6 @@ export function InferredVoiceNote({ inferredVoice, onSavedDraft }: InferredVoice
         bannedWords: [],
         keywords: [],
         emojiRules: "",
-        hashtagRules: "",
         ctaStyle: "",
         exampleCaptions: [],
         isDraft: true,
