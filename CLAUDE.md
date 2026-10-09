@@ -377,10 +377,6 @@ things now work together against that:
    read on what's relevant right now - not as a routine step. Only
    `/api/generate` gets this tool (not `/api/refine`, which only tweaks one
    already-written caption and doesn't need fresh research).
-   **Known gap:** `lib/usage.ts`'s cost estimate is token-based only and does
-   not yet add Anthropic's separate flat per-search fee - the admin usage
-   dashboard will undercount true spend slightly whenever Claude actually
-   searches. Revisit if that starts to matter.
 
 Because Claude's response can now interleave narration/text blocks around
 search tool calls, `extractText()` in `lib/claudeGenerate.ts` was changed to
