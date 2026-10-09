@@ -29,7 +29,22 @@ export interface GenerateStructuredArgs<T> {
    * throwing would fail the whole generation over one imperfect variant.
    */
   validate?: (data: T) => string | null;
+  /** Gives Claude the server-side web_search tool for this call - see `WEB_SEARCH_TOOL` below. */
+  enableWebSearch?: boolean;
 }
+
+/**
+ * Anthropic's server-side web search tool: the API itself performs the
+ * search and folds the results back into the same response (no client-side
+ * tool loop needed). `max_uses` caps it at a few searches per call to keep
+ * latency and cost bounded - this is meant to sharpen a caption with a
+ * quick, specific lookup, not to run a research project.
+ */
+const WEB_SEARCH_TOOL: Anthropic.WebSearchTool20250305 = {
+  type: "web_search_20250305",
+  name: "web_search",
+  max_uses: 3,
+};
 
 export interface GenerateStructuredResult<T> {
   data: T;
@@ -74,11 +89,19 @@ function imagesToBlocks(images: ImageInput[]): Anthropic.ContentBlockParam[] {
   });
 }
 
+/**
+ * Only the LAST text block, not every text block joined - with web search
+ * enabled, Claude's response can interleave several text blocks around its
+ * search tool calls (e.g. a sentence noting it's about to look something up),
+ * and joining all of them would corrupt the strict-JSON-only contract with
+ * that narration. A plain (no-tool) response is still just one text block,
+ * so this is a strict generalization, not a behavior change for that case.
+ */
 function extractText(message: Anthropic.Message): string {
-  return message.content
-    .filter((block): block is Anthropic.TextBlock => block.type === "text")
-    .map((block) => block.text)
-    .join("");
+  const textBlocks = message.content.filter(
+    (block): block is Anthropic.TextBlock => block.type === "text",
+  );
+  return textBlocks.length ? textBlocks[textBlocks.length - 1].text : "";
 }
 
 function parseJsonLoose(text: string): unknown {
@@ -98,6 +121,7 @@ export async function generateStructured<T>({
   images,
   schema,
   validate,
+  enableWebSearch,
 }: GenerateStructuredArgs<T>): Promise<GenerateStructuredResult<T>> {
   const client = getAnthropicClient();
   const content: Anthropic.ContentBlockParam[] = [
@@ -119,6 +143,7 @@ export async function generateStructured<T>({
       max_tokens: MAX_OUTPUT_TOKENS,
       system: systemPrompt,
       messages: [{ role: "user", content }],
+      ...(enableWebSearch ? { tools: [WEB_SEARCH_TOOL] } : {}),
     });
 
     totalInputTokens += message.usage.input_tokens;

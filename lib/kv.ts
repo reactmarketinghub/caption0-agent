@@ -233,4 +233,39 @@ export async function listBrandDocLogs(limit = 20): Promise<BrandDocLogEntry[]> 
   }
 }
 
+const CAPTION_ANGLE_KEY = (clientId: string) => `angles:${clientId}`;
+// ~13 generations' worth (3 variants x primary platform) - enough recent
+// history to steer away from repeats without bloating the prompt forever.
+const CAPTION_ANGLE_MAX_ENTRIES = 40;
+
+/**
+ * Appends this generation's per-variant creative "angle" labels to a
+ * per-client rolling history, so the next generation for the same client can
+ * be told what's already been used recently and told to pick something
+ * different - the anti-repetition "memory" `buildSystemPrompt()`'s
+ * `recentAngles` reads from. No-ops for Mode B (no clientId) since there's
+ * no durable identity to track repetition against.
+ */
+export async function logCaptionAngles(clientId: string, angles: string[]): Promise<void> {
+  const kv = getKv();
+  if (!kv || !clientId || !angles.length) return;
+  try {
+    await kv.lpush(CAPTION_ANGLE_KEY(clientId), ...angles);
+    await kv.ltrim(CAPTION_ANGLE_KEY(clientId), 0, CAPTION_ANGLE_MAX_ENTRIES - 1);
+  } catch (err) {
+    console.warn("KV logCaptionAngles failed:", err);
+  }
+}
+
+export async function getRecentAngles(clientId: string): Promise<string[]> {
+  const kv = getKv();
+  if (!kv || !clientId) return [];
+  try {
+    return await kv.lrange(CAPTION_ANGLE_KEY(clientId), 0, CAPTION_ANGLE_MAX_ENTRIES - 1);
+  } catch (err) {
+    console.warn("KV getRecentAngles failed:", err);
+    return [];
+  }
+}
+
 export { kvConfigured };

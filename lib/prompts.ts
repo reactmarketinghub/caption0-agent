@@ -9,6 +9,11 @@ const HUMAN_VOICE_GUIDANCE = `Write like a real social media manager typed this 
 - Vary sentence length and rhythm across the 3 variants - they shouldn't read like the same template with words swapped.
 - Sound specific to this creative and this brand, not like generic ad copy that could run under any photo.`;
 
+const CREATIVE_VARIETY_GUIDANCE = `Be genuinely creative - don't default to the same safe move every time:
+- A brand profile's permitted claims, approved phrases, or keywords are optional raw material, not a formula. "We're allowed to say X" does NOT mean "therefore say X here." Across variants, and across this client's posts over time, most captions should NOT lean on any specific approved claim at all - what's actually shown in the creative is usually the better story.
+- The 3 variants for a given platform must take genuinely different creative angles from each other, not the same idea reworded. Draw from distinct angle types - e.g. a direct product/claim-led angle, an emotional/lifestyle/story angle, a curiosity or question-led hook, a social-proof or community angle, a playful/observational angle, a behind-the-scenes or process angle - and use a claim-led angle in at most one variant, if any.
+- Actually analyze this specific creative, the brand profile, and (when you used it) anything you found via search, before deciding each variant's angle - don't reach for the first available claim or keyword by reflex. A caption that could run unchanged under a different photo from this client didn't do its job.`;
+
 const JSON_CONTRACT = `Return ONLY strict JSON matching this exact shape, no markdown fences, no commentary:
 {
   "inferred_voice"?: string,   // include ONLY if no brand profile was given
@@ -16,7 +21,7 @@ const JSON_CONTRACT = `Return ONLY strict JSON matching this exact shape, no mar
     {
       "platform": "instagram" | "tiktok" | "facebook" | "linkedin",
       "variants": [
-        { "caption": string, "hashtags": string[], "char_count": number }
+        { "caption": string, "hashtags": string[], "char_count": number, "angle": string }
       ]
     }
   ]
@@ -26,6 +31,7 @@ Rules for the JSON:
 - Each platform must have exactly 3 variants.
 - "char_count" is the character count of "caption" (including any inline hashtags you put in the caption body, but hashtags listed separately in "hashtags" should NOT be double counted unless they also appear in the caption text).
 - "hashtags" entries do not include the leading "#".
+- "angle" is a short 3-8 word internal label naming this variant's creative angle (e.g. "founder story hook", "customer social-proof", "playful observational humor", "direct product claim") - never shown to the end user, used only to track variety over time.
 - Do not wrap the JSON in \`\`\`.`;
 
 function platformBlock(ids: PlatformId[], postFormat: PostFormat | undefined): string {
@@ -50,7 +56,10 @@ function brandVoiceBlock(profile?: BrandProfile | null): string {
     `Brand profile for ${profile.clientName}:`,
     `Tone of voice: ${profile.toneOfVoice}`,
   ];
-  if (profile.dos.length) lines.push(`Do: ${profile.dos.join("; ")}`);
+  if (profile.dos.length)
+    lines.push(
+      `Do (a menu of things that are ON-BRAND and permitted when relevant, not a checklist to work through every time): ${profile.dos.join("; ")}`,
+    );
   if (profile.donts.length) lines.push(`Don't: ${profile.donts.join("; ")}`);
   if (profile.bannedWords.length)
     lines.push(`Never use these words/phrases: ${profile.bannedWords.join(", ")}`);
@@ -84,7 +93,18 @@ export interface BuildSystemPromptArgs {
   creativeType: "static" | "carousel" | "video";
   /** Cheap pixel-based heuristic flag (fast cuts or a static talking-head shot) - see lib/client/extractVideoFrames.ts. */
   videoLooksVoHeavy?: boolean;
+  /**
+   * This client's recent per-variant "angle" labels (lib/kv.ts's
+   * `getRecentAngles()`) - told to Claude as angles to avoid repeating, so
+   * variety holds across generations/sessions, not just within one
+   * generation's 3 variants. Omitted entirely for Mode B (no client).
+   */
+  recentAngles?: string[];
+  /** Whether this call has the web_search tool bound - only true for /api/generate, see lib/claudeGenerate.ts's `enableWebSearch`. */
+  webSearchEnabled?: boolean;
 }
+
+const WEB_SEARCH_GUIDANCE = `You have a web_search tool available. Use it sparingly - at most a couple of searches - and only when it would genuinely sharpen a caption: confirming a current, specific fact about this client/brand or product that isn't already covered by the brand profile (e.g. a recent launch, a real claim, what their site/social actually says), or getting a quick read on what's current/relevant for this kind of post right now. Don't search for things you already know, and don't let searching pad or slow down the result. Whether or not you search, your FINAL reply must be only the JSON object from the contract below - no narration, commentary, or mention of having searched, before or after it.`;
 
 export function buildSystemPrompt({
   profile,
@@ -93,6 +113,8 @@ export function buildSystemPrompt({
   platforms,
   creativeType,
   videoLooksVoHeavy,
+  recentAngles,
+  webSearchEnabled,
 }: BuildSystemPromptArgs): string {
   const parts: string[] = [
     `You are a senior social media copywriter at a marketing agency, writing ready-to-post captions for a client's social channels.`,
@@ -131,6 +153,20 @@ export function buildSystemPrompt({
   );
 
   parts.push(HUMAN_VOICE_GUIDANCE);
+  parts.push(CREATIVE_VARIETY_GUIDANCE);
+
+  if (recentAngles && recentAngles.length) {
+    parts.push(
+      `Angles already used in this client's recent posts - do NOT repeat any of these, pick genuinely different angles this time:\n${recentAngles
+        .slice(0, 15)
+        .map((a) => `- ${a}`)
+        .join("\n")}`,
+    );
+  }
+
+  if (webSearchEnabled) {
+    parts.push(WEB_SEARCH_GUIDANCE);
+  }
 
   parts.push(JSON_CONTRACT);
 

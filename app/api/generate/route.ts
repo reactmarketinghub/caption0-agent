@@ -3,7 +3,13 @@ import { generateRequestSchema, generationResponseSchema } from "@/lib/schemas";
 import { generateStructured, imagesWithVideoLabels } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { validateGenerationResponse } from "@/lib/generationValidation";
-import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
+import {
+  getBrandProfile,
+  checkAndConsumeRateLimit,
+  logGeneration,
+  getRecentAngles,
+  logCaptionAngles,
+} from "@/lib/kv";
 import { getCurrentUserEmail } from "@/lib/auth";
 
 // Vision + multi-platform generation (plus a possible retry) can take a
@@ -49,6 +55,7 @@ export async function POST(req: Request) {
   } = parsedRequest.data;
 
   const profile = clientId ? await getBrandProfile(clientId) : null;
+  const recentAngles = clientId ? await getRecentAngles(clientId) : [];
 
   const system = buildSystemPrompt({
     profile,
@@ -57,6 +64,8 @@ export async function POST(req: Request) {
     platforms,
     creativeType,
     videoLooksVoHeavy,
+    recentAngles,
+    webSearchEnabled: true,
   });
   const userText =
     creativeType === "video"
@@ -72,7 +81,15 @@ export async function POST(req: Request) {
       images: imagesWithVideoLabels(images, creativeType, videoFrameTimestamps),
       schema: generationResponseSchema,
       validate: (d) => validateGenerationResponse(d, postFormat),
+      enableWebSearch: true,
     });
+
+    if (clientId) {
+      const newAngles = data.platforms.flatMap((p) =>
+        p.variants.map((v) => v.angle).filter((a): a is string => Boolean(a)),
+      );
+      await logCaptionAngles(clientId, newAngles);
+    }
 
     await logGeneration({
       timestamp: new Date().toISOString(),

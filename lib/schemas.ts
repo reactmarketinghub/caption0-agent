@@ -59,6 +59,14 @@ export const captionVariantSchema = z.object({
   caption: z.string().min(1),
   hashtags: z.array(z.string()).default([]),
   char_count: z.number().int().nonnegative(),
+  /**
+   * Internal bookkeeping only (never shown to the end user) - a short label
+   * for this variant's creative angle, logged per-client so future
+   * generations can be told which angles were already used recently and
+   * avoid repeating them. Optional so a missing/omitted value never forces
+   * a retry.
+   */
+  angle: z.string().optional(),
 });
 export type CaptionVariant = z.infer<typeof captionVariantSchema>;
 

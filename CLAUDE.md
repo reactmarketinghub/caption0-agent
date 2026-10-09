@@ -339,6 +339,55 @@ capability layered on top of the frame-based flow (e.g. an extra content
 block with a transcript passed to the same `/api/generate` prompt builder),
 not a rework of this stage.
 
+## Creative variety and anti-repetition
+
+Feedback from the team: the generator leaned on whatever permitted claim the
+brand profile happened to mention (e.g. a "do" like "can claim
+dermatologist-tested") in nearly every caption, for nearly every post. Three
+things now work together against that:
+
+1. **`CREATIVE_VARIETY_GUIDANCE` in `lib/prompts.ts`** states explicitly that
+   a brand profile's `dos`/`keywords` are a menu, not a formula - "allowed to
+   say X" does not mean "say X here" - and that the 3 variants for a platform
+   must take genuinely different angle *types* (claim-led, emotional/story,
+   curiosity/question, social-proof, playful/observational,
+   behind-the-scenes), with a claim-led angle capped at one variant per
+   platform, if any. `brandVoiceBlock()`'s `dos`/`keywords` lines carry the
+   same "menu, not checklist" framing inline.
+2. **Per-variant `angle` field + cross-generation memory.** Each caption
+   variant now includes an internal-only `angle` field (`captionVariantSchema`
+   in `lib/schemas.ts`, never shown in the UI) - a short label like "direct
+   product claim" or "founder story hook". `/api/generate` logs every
+   generation's angles to a per-client rolling history via
+   `logCaptionAngles()`/`getRecentAngles()` in `lib/kv.ts` (capped at the last
+   40 - roughly a dozen generations), and `buildSystemPrompt()`'s
+   `recentAngles` tells Claude which angles this client's recent posts
+   already used so it avoids repeating them. This is the actual "memory" -
+   variety is enforced across sessions/days for a given client, not just
+   within one generation's 3 variants. Mode B (no `clientId`) has no identity
+   to key this on, so it's skipped there.
+3. **Real web search, not just reasoning over what's already on file.**
+   `/api/generate` passes `enableWebSearch: true` to `generateStructured()`
+   (`lib/claudeGenerate.ts`), which binds Anthropic's server-side
+   `web_search_20250305` tool (capped at `max_uses: 3` to bound latency/cost -
+   it's a server tool, so the search and the final answer come back in one
+   API response, no extra round trip needed on our end). `buildSystemPrompt()`'s
+   `WEB_SEARCH_GUIDANCE` tells Claude to use it sparingly, only to confirm a
+   specific current fact not already in the brand profile or to get a quick
+   read on what's relevant right now - not as a routine step. Only
+   `/api/generate` gets this tool (not `/api/refine`, which only tweaks one
+   already-written caption and doesn't need fresh research).
+   **Known gap:** `lib/usage.ts`'s cost estimate is token-based only and does
+   not yet add Anthropic's separate flat per-search fee - the admin usage
+   dashboard will undercount true spend slightly whenever Claude actually
+   searches. Revisit if that starts to matter.
+
+Because Claude's response can now interleave narration/text blocks around
+search tool calls, `extractText()` in `lib/claudeGenerate.ts` was changed to
+read only the *last* text block instead of joining every text block - with no
+tools involved (e.g. `/api/refine`, brand-doc extraction) this is identical
+to the old behavior, since there's normally just one text block.
+
 ## Local development
 
 ```bash
