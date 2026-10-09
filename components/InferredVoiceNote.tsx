@@ -33,6 +33,7 @@ export function InferredVoiceNote({ inferredVoice, onSavedDraft }: InferredVoice
         dos: [],
         donts: [],
         bannedWords: [],
+        keywords: [],
         emojiRules: "",
         hashtagRules: "",
         ctaStyle: "",

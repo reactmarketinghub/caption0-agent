@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateRequestSchema, generationResponseSchema } from "@/lib/schemas";
-import { generateStructured } from "@/lib/claudeGenerate";
+import { generateStructured, imagesWithVideoLabels } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { validateGenerationResponse } from "@/lib/generationValidation";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
@@ -37,8 +37,16 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { clientId, postFormat, objective, platforms, creativeType, images, videoLooksVoHeavy } =
-    parsedRequest.data;
+  const {
+    clientId,
+    postFormat,
+    objective,
+    platforms,
+    creativeType,
+    images,
+    videoLooksVoHeavy,
+    videoFrameTimestamps,
+  } = parsedRequest.data;
 
   const profile = clientId ? await getBrandProfile(clientId) : null;
 
@@ -61,7 +69,7 @@ export async function POST(req: Request) {
     const { data, usage } = await generateStructured({
       system,
       userText,
-      images: images.map((dataUrl) => ({ dataUrl })),
+      images: imagesWithVideoLabels(images, creativeType, videoFrameTimestamps),
       schema: generationResponseSchema,
       validate: (d) => validateGenerationResponse(d, postFormat),
     });

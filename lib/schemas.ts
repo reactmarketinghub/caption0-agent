@@ -26,6 +26,8 @@ export const brandProfileSchema = z.object({
   emojiRules: z.string().default(""),
   hashtagRules: z.string().default(""),
   ctaStyle: z.string().default(""),
+  /** Brand/product keywords or phrases Claude should weave in where natural (e.g. for SEO/search relevance). */
+  keywords: z.array(z.string()).default([]),
   exampleCaptions: z.array(z.string()).min(0).max(10).default([]),
   /** True when this profile was seeded from a Mode B "inferred voice" and not yet reviewed. */
   isDraft: z.boolean().default(false),
@@ -87,6 +89,13 @@ export const generateRequestSchema = z.object({
   images: z.array(z.string()).min(1),
   /** Only meaningful for creativeType "video". */
   videoLooksVoHeavy: z.boolean().optional(),
+  /**
+   * Only meaningful for creativeType "video" - approximate capture second of
+   * each entry in `images`, same order/length. Lets the prompt tell Claude
+   * how much real time separates frames instead of implying a continuous
+   * sequence, so it doesn't invent a narrative connecting unrelated moments.
+   */
+  videoFrameTimestamps: z.array(z.number()).optional(),
 });
 export type GenerateRequest = z.infer<typeof generateRequestSchema>;
 
@@ -98,6 +107,8 @@ export const refineRequestSchema = z.object({
   platform: platformIdSchema,
   creativeType: z.enum(["static", "carousel", "video"]),
   images: z.array(z.string()).min(1),
+  videoLooksVoHeavy: z.boolean().optional(),
+  videoFrameTimestamps: z.array(z.number()).optional(),
   currentCaption: z.string(),
   instruction: z.enum(["regenerate", "shorter", "punchier"]),
 });

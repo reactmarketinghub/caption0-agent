@@ -64,6 +64,8 @@ export function CaptionGenerator() {
           creativeType,
           images: assets.map((a) => a.dataUrl),
           videoLooksVoHeavy: creativeType === "video" ? looksVoHeavy : undefined,
+          videoFrameTimestamps:
+            creativeType === "video" ? assets.map((a) => a.timestampSec ?? 0) : undefined,
         }),
       });
       const json = await res.json();
@@ -82,6 +84,9 @@ export function CaptionGenerator() {
     objective: objective ?? undefined,
     creativeType: creativeType ?? "static",
     images: assets.map((a) => a.dataUrl),
+    videoLooksVoHeavy: creativeType === "video" ? looksVoHeavy : undefined,
+    videoFrameTimestamps:
+      creativeType === "video" ? assets.map((a) => a.timestampSec ?? 0) : undefined,
   };
 
   return (

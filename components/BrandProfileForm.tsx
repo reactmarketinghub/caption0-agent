@@ -72,6 +72,7 @@ interface FormState {
   dos: string;
   donts: string;
   bannedWords: string;
+  keywords: string;
   emojiRules: string;
   hashtagRules: string;
   ctaStyle: string;
@@ -85,6 +86,7 @@ function toFormState(profile?: BrandProfile | null): FormState {
     dos: fromLines(profile?.dos ?? []),
     donts: fromLines(profile?.donts ?? []),
     bannedWords: fromLines(profile?.bannedWords ?? []),
+    keywords: fromLines(profile?.keywords ?? []),
     emojiRules: profile?.emojiRules ?? "",
     hashtagRules: profile?.hashtagRules ?? "",
     ctaStyle: profile?.ctaStyle ?? "",
@@ -99,6 +101,7 @@ function toInput(state: FormState, isDraft: boolean): BrandProfileInput {
     dos: toLines(state.dos),
     donts: toLines(state.donts),
     bannedWords: toLines(state.bannedWords),
+    keywords: toLines(state.keywords),
     emojiRules: state.emojiRules.trim(),
     hashtagRules: state.hashtagRules.trim(),
     ctaStyle: state.ctaStyle.trim(),
@@ -136,6 +139,7 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
       dos: result.dos.length ? fromLines(result.dos) : s.dos,
       donts: result.donts.length ? fromLines(result.donts) : s.donts,
       bannedWords: result.bannedWords.length ? fromLines(result.bannedWords) : s.bannedWords,
+      keywords: result.keywords.length ? fromLines(result.keywords) : s.keywords,
       emojiRules: result.emojiRules || s.emojiRules,
       hashtagRules: result.hashtagRules || s.hashtagRules,
       ctaStyle: result.ctaStyle || s.ctaStyle,
@@ -470,6 +474,16 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
               rows={3}
               value={state.bannedWords}
               onChange={(e) => set("bannedWords", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="keywords">Keywords (one per line)</Label>
+            <Textarea
+              id="keywords"
+              rows={3}
+              placeholder="Product names, taglines, or search-relevant terms to weave in where natural"
+              value={state.keywords}
+              onChange={(e) => set("keywords", e.target.value)}
             />
           </div>
           <div className="grid gap-5 sm:grid-cols-2">

@@ -7,6 +7,8 @@ import { dataUrlToBase64 } from "./client/creativeAsset";
 export interface ImageInput {
   dataUrl: string;
   mediaType?: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+  /** Short text sent immediately before this image (e.g. a video frame's timestamp), so Claude has per-image context instead of an undifferentiated image stack. */
+  label?: string;
 }
 
 export interface GenerateStructuredArgs<T> {
@@ -34,15 +36,42 @@ export interface GenerateStructuredResult<T> {
   usage: { inputTokens: number; outputTokens: number };
 }
 
-function imagesToBlocks(images: ImageInput[]): Anthropic.ImageBlockParam[] {
-  return images.map((img) => ({
-    type: "image",
-    source: {
-      type: "base64",
-      media_type: img.mediaType ?? "image/jpeg",
-      data: dataUrlToBase64(img.dataUrl),
-    },
+/**
+ * Labels each video frame with its approximate timestamp before sending it to
+ * Claude, instead of an undifferentiated stack of images - without this,
+ * nothing tells Claude how much real time (and potential scene change)
+ * separates frames pulled from a single video, which invites it to narrate a
+ * false continuous sequence of events across moments that may be seconds or
+ * tens of seconds apart. No-ops for static/carousel creatives.
+ */
+export function imagesWithVideoLabels(
+  dataUrls: string[],
+  creativeType: "static" | "carousel" | "video",
+  timestamps?: number[],
+): ImageInput[] {
+  if (creativeType !== "video" || !timestamps || timestamps.length !== dataUrls.length) {
+    return dataUrls.map((dataUrl) => ({ dataUrl }));
+  }
+  return dataUrls.map((dataUrl, i) => ({
+    dataUrl,
+    label: `Frame ${i + 1} of ${dataUrls.length}, captured at ~${timestamps[i].toFixed(1)}s into the video.`,
   }));
+}
+
+function imagesToBlocks(images: ImageInput[]): Anthropic.ContentBlockParam[] {
+  return images.flatMap((img) => {
+    const blocks: Anthropic.ContentBlockParam[] = [];
+    if (img.label) blocks.push({ type: "text", text: img.label });
+    blocks.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: img.mediaType ?? "image/jpeg",
+        data: dataUrlToBase64(img.dataUrl),
+      },
+    });
+    return blocks;
+  });
 }
 
 function extractText(message: Anthropic.Message): string {

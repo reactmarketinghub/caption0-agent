@@ -178,6 +178,14 @@ a live deployment.
    `brandVoiceBlock()`) for every generation instead of the "infer the
    tone" instruction.
 
+`BrandProfile` holds one brand-voice document's worth of structured fields
+(tone, do's/don'ts, banned words, **keywords** - product names/taglines/
+search-relevant terms Claude should weave in where natural, emoji/hashtag
+rules, CTA style, example captions) - not free-form file attachments. For
+reference material you want the team to see but that isn't meant to shape
+every generation (logos, fonts, full guideline PDFs for human reference),
+use Brand kit files below instead.
+
 Upload mechanics: files go straight from the browser to Vercel Blob under
 `uploads/brand-doc/...` (bypassing the ~4.5MB serverless body cap the same
 way creative uploads do - see `lib/client/uploadBrandDocFile.ts`), then
@@ -218,8 +226,8 @@ file is a PDF/PPTX/DOCX/TXT (checked via `isAutoExtractableDoc()` in
 extraction pipeline as the "Import from files" flow and merges the result
 into the profile with `mergeExtractedIntoProfile()` - blank single-value
 fields (tone, emoji/hashtag rules, CTA style) get filled in, list fields
-(do's/don'ts/banned words/example captions) get unioned in, and nothing a
-human already typed is overwritten. That merged profile is what
+(do's/don'ts/banned words/keywords/example captions) get unioned in, and
+nothing a human already typed is overwritten. That merged profile is what
 `brandVoiceBlock()` injects into every future generation for this client -
 so uploading a client's brand guidelines toolkit here is enough to have
 captions follow it going forward, for this or any other client. Everything
@@ -303,6 +311,27 @@ adds an extra instruction to lean even harder on on-screen text and stay
 conservative, since it's flagged there but not surfaced as a manual
 brief-me nudge (there's no brief field). Tune `FAST_CUT_THRESHOLD` /
 `STATIC_SHOT_THRESHOLD` after looking at real client videos.
+
+**Frames are labeled with their timestamp, not sent as a bare image stack.**
+Each extracted frame already carried a `timestampSec` client-side
+(`lib/client/extractVideoFrames.ts`), but it never reached Claude - frames
+went to `/api/generate`/`/api/refine` as plain data URLs with no indication
+of how much real time separated them. Claude would sometimes narrate a
+false continuous sequence (e.g. treating a 0.5s hook frame and a frame from
+20 seconds later as back-to-back action), which is the root cause behind
+captions that "don't make sense" for a video. The fix: `videoFrameTimestamps`
+now rides alongside `images` on both API requests (populated from
+`CreativeAsset.timestampSec` in `CaptionGenerator.tsx`), and
+`imagesWithVideoLabels()` in `lib/claudeGenerate.ts` turns each one into a
+`"Frame N of M, captured at ~Ts into the video."` text block sent
+immediately before that frame's image block (`generateStructured()`/
+`imagesToBlocks()` now interleave text+image pairs instead of a flat image
+array). `buildSystemPrompt()` also explicitly tells Claude these are sparse,
+non-continuous samples and not to invent a transition/action connecting one
+frame to the next - treat the set like one well-chosen photo, not a
+flipbook. `/api/refine` previously dropped `videoLooksVoHeavy` entirely when
+rebuilding the system prompt for a refine call; it's now forwarded too, so
+refine's video guidance doesn't regress versus the original generation.
 
 **Audio/video transcription is a planned future stage.** Do not build
 hooks, config, or partial plumbing for it now - when it happens, it's a new

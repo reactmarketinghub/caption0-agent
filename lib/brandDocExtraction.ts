@@ -42,6 +42,7 @@ export function mergeExtractedIntoProfile(
     dos: dedupe(existing.dos, extracted.dos),
     donts: dedupe(existing.donts, extracted.donts),
     bannedWords: dedupe(existing.bannedWords, extracted.bannedWords),
+    keywords: dedupe(existing.keywords, extracted.keywords),
     emojiRules: existing.emojiRules || extracted.emojiRules,
     hashtagRules: existing.hashtagRules || extracted.hashtagRules,
     ctaStyle: existing.ctaStyle || extracted.ctaStyle,

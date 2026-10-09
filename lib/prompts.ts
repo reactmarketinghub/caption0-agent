@@ -54,6 +54,10 @@ function brandVoiceBlock(profile?: BrandProfile | null): string {
   if (profile.donts.length) lines.push(`Don't: ${profile.donts.join("; ")}`);
   if (profile.bannedWords.length)
     lines.push(`Never use these words/phrases: ${profile.bannedWords.join(", ")}`);
+  if (profile.keywords.length)
+    lines.push(
+      `Brand/product keywords to weave in naturally where relevant (don't force all of them into every caption, and never at the expense of sounding natural): ${profile.keywords.join(", ")}`,
+    );
   if (profile.emojiRules) lines.push(`Emoji rules: ${profile.emojiRules}`);
   if (profile.hashtagRules) lines.push(`Hashtag rules: ${profile.hashtagRules}`);
   if (profile.ctaStyle) lines.push(`CTA style: ${profile.ctaStyle}`);
@@ -110,7 +114,10 @@ export function buildSystemPrompt({
 
   if (creativeType === "video") {
     parts.push(
-      `The creative is a video. You are shown ${`several evenly-spaced extracted frames`}, including an early frame around the 0.5s mark (the "hook" moment). You CANNOT hear this video's audio. Base captions strictly on the visuals and any on-screen text/captions visible in the frames. Do NOT guess at, invent, or paraphrase spoken dialogue or voiceover content — keep the caption grounded in what is visually shown.`,
+      `The creative is a video. You are shown several evenly-spaced extracted frames, each labeled with its approximate timestamp, including an early frame around the 0.5s mark (the "hook" moment). You CANNOT hear this video's audio. Base captions strictly on the visuals and any on-screen text/captions visible in the frames. Do NOT guess at, invent, or paraphrase spoken dialogue or voiceover content — keep the caption grounded in what is visually shown.`,
+    );
+    parts.push(
+      `These frames are sparse, non-continuous samples, not a flipbook of consecutive moments — real seconds (sometimes several) pass between one frame and the next, often with cuts, camera moves, or scene changes you aren't shown. Do not narrate a blow-by-blow sequence as if one frame leads directly into the next, and do not invent a transition, action, or causal link between frames that isn't independently visible in each one. Instead, form an overall impression from the full set of frames (subject, setting, product, mood, on-screen text) and write the caption from that — the same way you would from a single well-chosen photo: specific and confident about what's actually shown, silent about what isn't.`,
     );
     if (videoLooksVoHeavy) {
       parts.push(
@@ -136,18 +143,20 @@ const BRAND_DOC_JSON_CONTRACT = `Return ONLY strict JSON matching this exact sha
   "dos": string[],
   "donts": string[],
   "bannedWords": string[],
+  "keywords": string[],
   "emojiRules": string,
   "hashtagRules": string,
   "ctaStyle": string,
   "exampleCaptions": string[]
 }
+- "keywords" is brand/product keywords or phrases (product names, taglines, search-relevant terms) the document calls out as worth using in captions - not a restatement of tone or do's/don'ts.
 - "exampleCaptions" should contain 3-10 example captions if the document includes any past captions/examples, otherwise an empty array.
 - Leave a field as an empty string/array if the document doesn't cover it - do not invent details.`;
 
 export function buildBrandDocParseSystemPrompt(): string {
   return [
     `You are helping a social media agency turn a client's brand voice guidelines document into a structured brand profile used to prompt an AI copywriter later.`,
-    `Read the provided document text and extract only what it actually says - tone of voice, do's and don'ts, banned words/phrases, emoji rules, hashtag rules, CTA style, and any example captions included.`,
+    `Read the provided document text and extract only what it actually says - tone of voice, do's and don'ts, banned words/phrases, brand/product keywords, emoji rules, hashtag rules, CTA style, and any example captions included.`,
     BRAND_DOC_JSON_CONTRACT,
   ].join("\n\n");
 }

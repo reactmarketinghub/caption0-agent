@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { refineRequestSchema, captionVariantSchema } from "@/lib/schemas";
-import { generateStructured } from "@/lib/claudeGenerate";
+import { generateStructured, imagesWithVideoLabels } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { validateCaptionLength } from "@/lib/generationValidation";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
@@ -41,8 +41,18 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { clientId, postFormat, objective, platform, creativeType, images, currentCaption, instruction } =
-    parsedRequest.data;
+  const {
+    clientId,
+    postFormat,
+    objective,
+    platform,
+    creativeType,
+    images,
+    videoLooksVoHeavy,
+    videoFrameTimestamps,
+    currentCaption,
+    instruction,
+  } = parsedRequest.data;
 
   const profile = clientId ? await getBrandProfile(clientId) : null;
   const system = buildSystemPrompt({
@@ -51,6 +61,7 @@ export async function POST(req: Request) {
     objective,
     platforms: [platform],
     creativeType,
+    videoLooksVoHeavy,
   });
   const userText = `The current caption for this platform is:\n"""\n${currentCaption}\n"""\n${INSTRUCTION_TEXT[instruction]}\n\nReturn ONLY strict JSON of the shape { "variant": { "caption": string, "hashtags": string[], "char_count": number } }, no markdown fences.`;
 
@@ -58,7 +69,7 @@ export async function POST(req: Request) {
     const { data, usage } = await generateStructured({
       system,
       userText,
-      images: images.map((dataUrl) => ({ dataUrl })),
+      images: imagesWithVideoLabels(images, creativeType, videoFrameTimestamps),
       schema: refineResponseSchema,
       validate: (d) => validateCaptionLength(platform, postFormat, d.variant),
     });
