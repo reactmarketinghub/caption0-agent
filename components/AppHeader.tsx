@@ -31,9 +31,6 @@ export async function AppHeader() {
           >
             Clients
           </Link>
-          <Link href="/admin" className="text-foreground/70 transition-colors hover:text-primary">
-            Usage
-          </Link>
         </nav>
       </div>
       {session?.user && (

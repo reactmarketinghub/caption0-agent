@@ -171,26 +171,6 @@ export async function logGeneration(entry: GenerationLogEntry): Promise<void> {
   }
 }
 
-export async function listGenerationLogs(limit = GENERATION_LOG_MAX_ENTRIES): Promise<GenerationLogEntry[]> {
-  const kv = getKv();
-  if (!kv) return [];
-  try {
-    const raw = await kv.lrange(GENERATION_LOG_KEY, 0, limit - 1);
-    return raw
-      .map((r) => {
-        try {
-          return JSON.parse(r) as GenerationLogEntry;
-        } catch {
-          return null;
-        }
-      })
-      .filter((e): e is GenerationLogEntry => Boolean(e));
-  } catch (err) {
-    console.warn("KV listGenerationLogs failed:", err);
-    return [];
-  }
-}
-
 export interface BrandDocLogEntry {
   timestamp: string;
   userEmail: string;

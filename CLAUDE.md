@@ -33,7 +33,6 @@ lib/
   blob.ts                     Resolves the Blob read-write token (handles a custom env-var-prefix connection, see "Custom Environment Variable Prefix gotcha" below)
   brandDocExtraction.ts       Shared file->text/image->Claude->structured-profile pipeline, used by both the manual "Import from files" flow and automatic brand-kit guideline extraction
   auth.ts                     Auth.js config + getCurrentUserEmail()
-  usage.ts                    Token -> USD cost estimate + usage report aggregation
   extractDocText.ts           PDF/PPTX/DOCX/text -> plain text for the brand-doc-to-profile flow
   client/                     Browser-only helpers: image resize, video frame extraction, Blob upload
 
@@ -50,7 +49,6 @@ components/
 app/
   page.tsx                     Main generator UI
   admin/clients/*               Brand profile list/create/edit
-  admin/page.tsx                 Usage & cost estimate dashboard
   login/page.tsx                 Google sign-in
   api/generate, api/refine       Core caption generation / single-variant refine
   api/clients*, api/brand-doc/parse   Brand profile CRUD + doc-to-profile extraction
