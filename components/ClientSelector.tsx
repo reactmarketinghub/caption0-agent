@@ -39,7 +39,13 @@ export function ClientSelector({ value, onChange }: ClientSelectorProps) {
         disabled={loading}
       >
         <SelectTrigger className="w-full sm:w-72">
-          <SelectValue placeholder="Select a client" />
+          <SelectValue placeholder="Select a client">
+            {(v: string) => {
+              if (v === NO_PROFILE_VALUE) return "New / no brand profile";
+              const client = clients.find((c) => c.id === v);
+              return client ? `${client.clientName}${client.isDraft ? " (draft)" : ""}` : v;
+            }}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={NO_PROFILE_VALUE}>New / no brand profile</SelectItem>
