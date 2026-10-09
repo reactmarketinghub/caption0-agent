@@ -40,3 +40,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Impeccable design-skill: settings.local.json wires Claude Code hooks to
+# run the engine binary below, both of which are per-developer-machine
+# artifacts (a 20MB+ OS/arch-specific compiled binary; "local" settings are
+# Claude Code's personal-not-shared tier) - each teammate who wants the
+# hooks runs `npx impeccable install` themselves, which fetches their own
+# platform's binary and writes their own local hook wiring. The skill docs/
+# reference/agents themselves stay committed so everyone gets the skill.
+.claude/settings.local.json
+.claude/skills/impeccable/scripts/bin/
