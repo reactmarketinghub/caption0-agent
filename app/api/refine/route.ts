@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { refineRequestSchema, captionVariantSchema } from "@/lib/schemas";
-import { generateStructured, imagesWithVideoLabels } from "@/lib/claudeGenerate";
+import { generateStructured, imagesWithVideoLabels, GenerationTimeoutError } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { validateCaptionLength, validateBannedWords, combineViolations } from "@/lib/generationValidation";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
@@ -92,6 +92,12 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
   } catch (err) {
     console.error("Refine failed:", err);
+    if (err instanceof GenerationTimeoutError) {
+      return NextResponse.json(
+        { error: "That took too long. Please try again." },
+        { status: 504 },
+      );
+    }
     return NextResponse.json(
       { error: "We couldn't update that caption this time. Please try again in a moment." },
       { status: 502 },

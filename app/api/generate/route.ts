@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateRequestSchema, generationResponseSchema } from "@/lib/schemas";
-import { generateStructured, imagesWithVideoLabels } from "@/lib/claudeGenerate";
+import { generateStructured, imagesWithVideoLabels, GenerationTimeoutError } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { validateGenerationResponse } from "@/lib/generationValidation";
 import {
@@ -105,6 +105,12 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
   } catch (err) {
     console.error("Generation failed:", err);
+    if (err instanceof GenerationTimeoutError) {
+      return NextResponse.json(
+        { error: "That took too long to generate. Please click Generate again - it usually works on a second try." },
+        { status: 504 },
+      );
+    }
     return NextResponse.json(
       {
         error:

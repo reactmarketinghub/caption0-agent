@@ -497,6 +497,33 @@ that block):
   surfacing the first one found. Both `/api/generate` and `/api/refine` pass
   `profile?.bannedWords` through.
 
+## Generation must finish inside Vercel's 60s limit, and fail as JSON
+
+A live generation once showed `Unexpected token 'A', "An error o"... is not
+valid JSON`: Vercel kills a function that runs past `maxDuration` (60s) and
+replies with a plain-text error page, which the browser then fed to
+`res.json()`. Three layers now guard against that:
+
+- **`lib/client/readApiJson.ts`** replaces every `res.json()` in the
+  components. It reads the body as text and, if it isn't JSON, throws a
+  plain-language message chosen by HTTP status. Use it for any new fetch to
+  our own API routes.
+- **A soft time budget in `generateStructured()`** (`lib/claudeGenerate.ts`,
+  `DEFAULT_TIME_BUDGET_MS` = 50s). Each attempt gets an `AbortSignal` for the
+  time left, and a retry (invalid JSON / failed validation) only starts if at
+  least `MIN_RETRY_MS` remains. Otherwise it throws `GenerationTimeoutError`,
+  which `/api/generate` and `/api/refine` turn into a clean JSON 504.
+- **Lower latency**: `GENERATION_EFFORT = "medium"` and
+  `MAX_OUTPUT_TOKENS = 8192` in `lib/anthropic.ts` (Sonnet 5's default effort
+  is "high"; adaptive thinking also counts toward `max_tokens`, so a tight cap
+  truncated the JSON and forced a second full attempt), and web search is
+  capped at `max_uses: 2`. Raise effort / searches back if captions look thin
+  and the time budget allows, or raise `maxDuration` if the Vercel plan does.
+
+Each attempt logs one JSON line (`evt`, `attempt`, `elapsedMs`, `stopReason`,
+`outputTokens`, `webSearches`) to the Vercel function logs - check those first
+when generation is slow or failing.
+
 ## Hashtags are not generated - this is intentional, by request
 
 At the team's request, this app does not generate or display hashtags

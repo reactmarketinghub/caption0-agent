@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { uploadBrandKitFile } from "@/lib/client/uploadBrandKitFile";
 import type { BrandKitFile } from "@/lib/schemas";
+import { readApiJson } from "@/lib/client/readApiJson";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -46,7 +47,7 @@ export function BrandKitSection({ clientId, initialFiles }: BrandKitSectionProps
             contentType: file.type || "application/octet-stream",
           }),
         });
-        const json = await res.json();
+        const json = await readApiJson(res);
         if (!res.ok) throw new Error(json.error ?? "Could not save that file.");
         setFiles(json.brandKitFiles);
         if (json.guidelinesMerged) anyMerged = true;
@@ -69,7 +70,7 @@ export function BrandKitSection({ clientId, initialFiles }: BrandKitSectionProps
       const res = await fetch(`/api/clients/${clientId}/brand-kit/${fileId}`, {
         method: "DELETE",
       });
-      const json = await res.json();
+      const json = await readApiJson(res);
       if (!res.ok) throw new Error(json.error ?? "Could not remove that file.");
       setFiles(json.brandKitFiles);
     } catch (err) {

@@ -14,6 +14,7 @@ import { ALL_PLATFORM_IDS, type PlatformId } from "@/config/platforms";
 import type { PostFormat, Objective } from "@/config/objectives";
 import type { CreativeAsset, CreativeType } from "@/lib/client/creativeAsset";
 import type { BrandProfile, GenerationResponse } from "@/lib/schemas";
+import { readApiJson } from "@/lib/client/readApiJson";
 
 const CREATIVE_TYPE_LABELS: Record<CreativeType, string> = {
   static: "Image",
@@ -75,7 +76,7 @@ export function CaptionGenerator() {
             creativeType === "video" ? assets.map((a) => a.timestampSec ?? 0) : undefined,
         }),
       });
-      const json = await res.json();
+      const json = await readApiJson(res);
       if (!res.ok) throw new Error(json.error ?? "Something went wrong.");
       setResults(json as GenerationResponse);
     } catch (err) {

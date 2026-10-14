@@ -1,8 +1,26 @@
 import type { z } from "zod";
 import type Anthropic from "@anthropic-ai/sdk";
-import { getAnthropicClient, CLAUDE_MODEL, MAX_OUTPUT_TOKENS } from "./anthropic";
+import { getAnthropicClient, CLAUDE_MODEL, MAX_OUTPUT_TOKENS, GENERATION_EFFORT } from "./anthropic";
 import { buildRetrySystemSuffix } from "./prompts";
 import { dataUrlToBase64 } from "./client/creativeAsset";
+
+/**
+ * Thrown when a generation runs out of its time budget. The routes turn this
+ * into a clean JSON error instead of letting Vercel kill the function at its
+ * hard limit, which answers with a plain-text page the UI can't parse.
+ */
+export class GenerationTimeoutError extends Error {
+  constructor() {
+    super("Generation ran out of time");
+    this.name = "GenerationTimeoutError";
+  }
+}
+
+// Total budget across all attempts. Routes set maxDuration = 60; this leaves
+// headroom for the KV reads/writes and response around the model call.
+const DEFAULT_TIME_BUDGET_MS = 50_000;
+// A second attempt needs at least this long to be worth starting.
+const MIN_RETRY_MS = 15_000;
 
 export interface ImageInput {
   dataUrl: string;
@@ -31,6 +49,8 @@ export interface GenerateStructuredArgs<T> {
   validate?: (data: T) => string | null;
   /** Gives Claude the server-side web_search tool for this call - see `WEB_SEARCH_TOOL` below. */
   enableWebSearch?: boolean;
+  /** Total time budget across all attempts; defaults to DEFAULT_TIME_BUDGET_MS. */
+  timeBudgetMs?: number;
 }
 
 /**
@@ -43,7 +63,7 @@ export interface GenerateStructuredArgs<T> {
 const WEB_SEARCH_TOOL: Anthropic.WebSearchTool20250305 = {
   type: "web_search_20250305",
   name: "web_search",
-  max_uses: 3,
+  max_uses: 2,
 };
 
 export interface GenerateStructuredResult<T> {
@@ -122,6 +142,7 @@ export async function generateStructured<T>({
   schema,
   validate,
   enableWebSearch,
+  timeBudgetMs = DEFAULT_TIME_BUDGET_MS,
 }: GenerateStructuredArgs<T>): Promise<GenerateStructuredResult<T>> {
   const client = getAnthropicClient();
   const content: Anthropic.ContentBlockParam[] = [
@@ -134,21 +155,51 @@ export async function generateStructured<T>({
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
 
+  const startedAt = Date.now();
+  const remainingMs = () => timeBudgetMs - (Date.now() - startedAt);
+
   const MAX_ATTEMPTS = 2;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    // A retry that can't finish in time would just get killed mid-flight.
+    if (attempt > 0 && remainingMs() < MIN_RETRY_MS) throw new GenerationTimeoutError();
+
     const systemPrompt = attempt === 0 ? system : system + buildRetrySystemSuffix(retrySuffixReason);
 
-    const message = await client.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      system: systemPrompt,
-      messages: [{ role: "user", content }],
-      ...(enableWebSearch ? { tools: [WEB_SEARCH_TOOL] } : {}),
-    });
+    let message: Anthropic.Message;
+    const signal = AbortSignal.timeout(Math.max(remainingMs(), 1));
+    try {
+      message = await client.messages.create(
+        {
+          model: CLAUDE_MODEL,
+          max_tokens: MAX_OUTPUT_TOKENS,
+          system: systemPrompt,
+          messages: [{ role: "user", content }],
+          output_config: { effort: GENERATION_EFFORT },
+          ...(enableWebSearch ? { tools: [WEB_SEARCH_TOOL] } : {}),
+        },
+        { signal },
+      );
+    } catch (err) {
+      if (signal.aborted) throw new GenerationTimeoutError();
+      throw err;
+    }
 
     totalInputTokens += message.usage.input_tokens;
     totalOutputTokens += message.usage.output_tokens;
     const usage = { inputTokens: totalInputTokens, outputTokens: totalOutputTokens };
+
+    // One line per attempt in the Vercel logs, so a slow or failing
+    // generation can be diagnosed from facts instead of guessed at.
+    console.log(
+      JSON.stringify({
+        evt: "generateStructured",
+        attempt: attempt + 1,
+        elapsedMs: Date.now() - startedAt,
+        stopReason: message.stop_reason,
+        outputTokens: message.usage.output_tokens,
+        webSearches: message.usage.server_tool_use?.web_search_requests ?? 0,
+      }),
+    );
 
     try {
       const parsed = parseJsonLoose(extractText(message));
@@ -156,7 +207,9 @@ export async function generateStructured<T>({
 
       const validationError = validate?.(validated) ?? null;
       const isLastAttempt = attempt === MAX_ATTEMPTS - 1;
-      if (validationError && !isLastAttempt) {
+      // Retry only if there's time for it; otherwise fall through and return
+      // the best-effort result, same as after a failed retry.
+      if (validationError && !isLastAttempt && remainingMs() >= MIN_RETRY_MS) {
         lastError = new Error(validationError);
         retrySuffixReason = validationError;
         continue;

@@ -30,6 +30,7 @@ import { BrandKitSection } from "@/components/BrandKitSection";
 import { uploadBrandDocFile } from "@/lib/client/uploadBrandDocFile";
 import { cn } from "@/lib/utils";
 import type { BrandDocParseResult, BrandProfile, BrandProfileInput } from "@/lib/schemas";
+import { readApiJson } from "@/lib/client/readApiJson";
 
 const ACCEPTED_EXTENSIONS = ".pptx,.pdf,.docx,.txt,.png,.jpg,.jpeg,.webp,.gif";
 const ACCEPTED_MIME_TYPES = [
@@ -192,7 +193,7 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ files: successfulFiles, clientName: state.clientName }),
       });
-      const json = await res.json();
+      const json = await readApiJson(res);
       if (!res.ok) throw new Error(json.error ?? "Could not read those files.");
       applyExtracted(json as BrandDocParseResult);
       setUploadLog((log) => log.map((e) => (successfulIds.includes(e.id) ? { ...e, status: "done" as const } : e)));
@@ -223,7 +224,7 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: pasteText }),
       });
-      const json = await res.json();
+      const json = await readApiJson(res);
       if (!res.ok) throw new Error(json.error ?? "Could not parse that text.");
       applyExtracted(json as BrandDocParseResult);
       setUploadLog((log) => log.map((e) => (e.id === id ? { ...e, status: "done" } : e)));
@@ -250,7 +251,7 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
-      const json = await res.json();
+      const json = await readApiJson(res);
       if (!res.ok) throw new Error(json.error ?? "Could not save this profile.");
       router.push("/admin/clients");
       router.refresh();

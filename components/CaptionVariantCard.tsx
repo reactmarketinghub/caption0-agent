@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { PLATFORM_RULES, getEffectiveCharLimit, type PlatformId } from "@/config/platforms";
 import type { CaptionVariant, RefineRequest } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
+import { readApiJson } from "@/lib/client/readApiJson";
 
 interface CaptionVariantCardProps {
   variant: CaptionVariant;
@@ -54,7 +55,7 @@ export function CaptionVariantCard({
           instruction,
         } satisfies RefineRequest),
       });
-      const json = await res.json();
+      const json = await readApiJson(res);
       if (!res.ok) throw new Error(json.error ?? "Something went wrong.");
       onUpdate(json.variant as CaptionVariant);
     } catch (err) {

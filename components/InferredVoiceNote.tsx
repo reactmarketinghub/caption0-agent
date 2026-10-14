@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { BrandProfile, BrandProfileInput } from "@/lib/schemas";
+import { readApiJson } from "@/lib/client/readApiJson";
 
 interface InferredVoiceNoteProps {
   inferredVoice: string;
@@ -44,7 +45,7 @@ export function InferredVoiceNote({ inferredVoice, onSavedDraft }: InferredVoice
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
-      const json = await res.json();
+      const json = await readApiJson(res);
       if (!res.ok) throw new Error(json.error ?? "Could not save draft profile.");
       setSaved(true);
       onSavedDraft?.(json as BrandProfile);
