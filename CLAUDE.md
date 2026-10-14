@@ -223,11 +223,21 @@ production with `DOMMatrix is not defined` while working locally (where
 `pdfjs-dist` and `@napi-rs/canvas` as plain `node_modules` requires, and
 `outputFileTracingIncludes` ships them (including the `linux-x64-gnu` binary
 Vercel runs on) with exactly the two PDF-parsing routes
-(`/api/brand-doc/parse`, `/api/clients/[id]/brand-kit`) and no others. To
-re-verify after touching either option: `next build`, then check
-`.next/server/app/api/brand-doc/parse/route.js.nft.json` lists
-`@napi-rs/canvas-linux-x64-gnu/*.node`. If you ever add another route that
-parses PDFs, add it to `PDF_ROUTES` there.
+(`/api/brand-doc/parse`, `/api/clients/[id]/brand-kit`) and no others.
+
+**This is guarded automatically.** `npm run build` is
+`next build && node scripts/check-pdf-trace.mjs`; that script reads each PDF
+route's `.nft.json` trace and exits non-zero if the canvas package, its
+native `.node` binary, `pdfjs-dist` or `pdf-parse` isn't shipped with it - so
+a broken config fails the Vercel build (production keeps serving the previous
+deployment) instead of failing for users at upload time. (Verified both ways:
+passes on the real config, fails with exit 1 when `next.config.ts` is
+emptied.) Needs Vercel's Build Command to be the default / `npm run build`,
+not an override of plain `next build`. If you add another route that parses
+PDFs, add it to `PDF_ROUTES` in `next.config.ts` **and** `ROUTES` in the
+script. If a file still fails to read, the upload form shows the real
+per-file reason and opens the paste-text box as a way forward (pasting never
+touches PDF parsing).
 
 **The "no readable text or images" error now says why, per file.** Before,
 `extractBrandProfileFromFiles()` threw one generic

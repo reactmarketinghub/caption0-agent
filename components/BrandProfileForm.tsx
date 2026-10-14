@@ -198,7 +198,11 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
       setUploadLog((log) => log.map((e) => (successfulIds.includes(e.id) ? { ...e, status: "done" as const } : e)));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not read those files.";
-      setError(message);
+      // The banner gets a way forward and the paste box opens for it; the
+      // per-file log line below keeps just the plain reason.
+      const punctuated = /[.!?]$/.test(message) ? message : `${message}.`;
+      setError(`${punctuated} You can also copy the text out of the file and paste it into the text box under the upload area.`);
+      setShowPaste(true);
       setUploadLog((log) =>
         log.map((e) => (successfulIds.includes(e.id) ? { ...e, status: "error" as const, error: message } : e)),
       );
