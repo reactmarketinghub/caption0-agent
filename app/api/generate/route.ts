@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       userText,
       images: imagesWithVideoLabels(images, creativeType, videoFrameTimestamps),
       schema: generationResponseSchema,
-      validate: (d) => validateGenerationResponse(d, postFormat),
+      validate: (d) => validateGenerationResponse(d, postFormat, profile?.bannedWords),
       enableWebSearch: true,
     });
 

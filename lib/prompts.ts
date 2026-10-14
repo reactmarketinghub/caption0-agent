@@ -7,7 +7,9 @@ const HUMAN_VOICE_GUIDANCE = `Write like a real social media manager typed this 
 - No forced rule-of-three lists and no "it's not just X, it's Y" construction unless a real example genuinely calls for it.
 - Don't lean on em dashes as a tic. Punctuate the way a person actually types a caption.
 - Vary sentence length and rhythm across the 3 variants - they shouldn't read like the same template with words swapped.
-- Sound specific to this creative and this brand, not like generic ad copy that could run under any photo.`;
+- Sound specific to this creative and this brand, not like generic ad copy that could run under any photo.
+- Use contractions naturally (it's, you'll, we're) and let a sentence run a little loose or informal when that's how a real person would actually type it - a slightly imperfect, conversational line reads more human than a grammatically tidy one.
+- Don't manufacture a neat closing thought, lesson, or call-back just to wrap things up - it's fine for a caption to simply end, the way people actually post, instead of resolving like an essay.`;
 
 const CREATIVE_VARIETY_GUIDANCE = `Be genuinely creative - don't default to the same safe move every time:
 - A brand profile's permitted claims, approved phrases, or keywords are optional raw material, not a formula. "We're allowed to say X" does NOT mean "therefore say X here." Across variants, and across this client's posts over time, most captions should NOT lean on any specific approved claim at all - what's actually shown in the creative is usually the better story.
@@ -15,6 +17,8 @@ const CREATIVE_VARIETY_GUIDANCE = `Be genuinely creative - don't default to the 
 - Actually analyze this specific creative, the brand profile, and (when you used it) anything you found via search, before deciding each variant's angle - don't reach for the first available claim or keyword by reflex. A caption that could run unchanged under a different photo from this client didn't do its job.`;
 
 const NO_HASHTAGS_GUIDANCE = `Do not include hashtags anywhere in any caption - no leading "#" tokens, no trailing hashtag block. Write every caption as plain, hashtag-free copy.`;
+
+const BRAND_COMPLIANCE_GUIDANCE = `Compliance comes before cleverness: the brand profile's "Don't" list and banned words/phrases above are hard, non-negotiable constraints - follow every one of them 100% of the time, with zero exceptions, even when breaking one would make for a punchier line. A caption that violates one of these is unusable no matter how good it otherwise reads, so if a draft idea needs a don't or a banned word to work, drop that idea rather than bend the rule. That said, compliance is a floor, not a script: within those constraints you have full creative freedom in how you frame, structure, and word each caption - let what's actually shown in THIS specific creative drive the angle, not a generic template you'd reuse for any photo. Also actually use the real information you were given - the brand's tone of voice, its do's, its keywords, its example captions - to ground the caption in specifics, instead of writing something generic that merely happens to avoid the don'ts.`;
 
 const JSON_CONTRACT = `Return ONLY strict JSON matching this exact shape, no markdown fences, no commentary:
 {
@@ -61,9 +65,14 @@ function brandVoiceBlock(profile?: BrandProfile | null): string {
     lines.push(
       `Do (a menu of things that are ON-BRAND and permitted when relevant, not a checklist to work through every time): ${profile.dos.join("; ")}`,
     );
-  if (profile.donts.length) lines.push(`Don't: ${profile.donts.join("; ")}`);
+  if (profile.donts.length)
+    lines.push(
+      `Don't (hard constraints - follow every one of these with zero exceptions): ${profile.donts.join("; ")}`,
+    );
   if (profile.bannedWords.length)
-    lines.push(`Never use these words/phrases: ${profile.bannedWords.join(", ")}`);
+    lines.push(
+      `Banned words/phrases - must NEVER appear anywhere in any caption, no exceptions, not even inside a negation ("not X") or a joke: ${profile.bannedWords.join(", ")}`,
+    );
   if (profile.keywords.length)
     lines.push(
       `Brand/product keywords to weave in naturally where relevant (don't force all of them into every caption, and never at the expense of sounding natural): ${profile.keywords.join(", ")}`,
@@ -154,6 +163,9 @@ export function buildSystemPrompt({
 
   parts.push(HUMAN_VOICE_GUIDANCE);
   parts.push(CREATIVE_VARIETY_GUIDANCE);
+  if (profile) {
+    parts.push(BRAND_COMPLIANCE_GUIDANCE);
+  }
   parts.push(NO_HASHTAGS_GUIDANCE);
 
   if (recentAngles && recentAngles.length) {

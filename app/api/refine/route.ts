@@ -3,7 +3,7 @@ import { z } from "zod";
 import { refineRequestSchema, captionVariantSchema } from "@/lib/schemas";
 import { generateStructured, imagesWithVideoLabels } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
-import { validateCaptionLength } from "@/lib/generationValidation";
+import { validateCaptionLength, validateBannedWords, combineViolations } from "@/lib/generationValidation";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
 import { getCurrentUserEmail } from "@/lib/auth";
 
@@ -71,7 +71,11 @@ export async function POST(req: Request) {
       userText,
       images: imagesWithVideoLabels(images, creativeType, videoFrameTimestamps),
       schema: refineResponseSchema,
-      validate: (d) => validateCaptionLength(platform, postFormat, d.variant),
+      validate: (d) =>
+        combineViolations(
+          validateCaptionLength(platform, postFormat, d.variant),
+          validateBannedWords(profile?.bannedWords ?? [], d.variant),
+        ),
     });
 
     await logGeneration({

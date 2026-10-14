@@ -434,6 +434,42 @@ read only the *last* text block instead of joining every text block - with no
 tools involved (e.g. `/api/refine`, brand-doc extraction) this is identical
 to the old behavior, since there's normally just one text block.
 
+## Sounding human, compliance, and creative freedom
+
+Three more pieces of standing guidance in `lib/prompts.ts`, added on top of
+`HUMAN_VOICE_GUIDANCE` rather than replacing it (same "add to it" rule as
+that block):
+
+- **`HUMAN_VOICE_GUIDANCE` gained two more bullets**: use contractions and
+  let a line run a little informal rather than grammatically tidy, and don't
+  force a neat closing thought just to wrap up a caption - real captions are
+  allowed to just end.
+- **`BRAND_COMPLIANCE_GUIDANCE`** (only added to the prompt when a
+  `BrandProfile` is actually loaded - there's nothing for it to reference in
+  Mode B) states explicitly that the profile's `donts` and `bannedWords` are
+  hard, zero-exception constraints that come before cleverness, that
+  compliance is a floor rather than a script (full creative freedom in
+  framing/structure/wording *within* those constraints, driven by what's
+  actually in the specific creative, not a reusable template), and that
+  Claude should actually ground captions in the real tone/do's/keywords/
+  example captions it was given rather than writing something generic that
+  merely avoids the don'ts. `brandVoiceBlock()`'s own `donts`/`bannedWords`
+  lines were reworded the same way ("hard constraints," "must NEVER appear,
+  no exceptions, not even inside a negation or a joke").
+- **`bannedWords` is now actually enforced, not just requested.** The
+  `donts` list is free-form behavioral guidance no string check can verify,
+  but `bannedWords` is a literal word/phrase list - mechanically checkable,
+  the same way a character limit is. `validateBannedWords()` in
+  `lib/generationValidation.ts` does a case-insensitive substring check
+  against each caption and plugs into the exact same `generateStructured()`
+  retry-with-a-corrective-instruction mechanism `validateCaptionLength()`
+  already used for character limits; `validateGenerationResponse()` now
+  takes a `bannedWords` array and checks both per variant, and
+  `combineViolations()` merges multiple simultaneous violations (e.g. over
+  length *and* a banned word) into one retry instruction instead of only
+  surfacing the first one found. Both `/api/generate` and `/api/refine` pass
+  `profile?.bannedWords` through.
+
 ## Hashtags are not generated - this is intentional, by request
 
 At the team's request, this app does not generate or display hashtags
