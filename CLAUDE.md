@@ -193,6 +193,36 @@ Claude's vision, and returns one merged profile. These blobs share the
 `uploads/` prefix with ephemeral creatives, so the same 24h cleanup cron
 sweeps them - no separate cleanup needed.
 
+**A PDF with no text layer falls back to rendering its pages as images.**
+`extractTextFromFile()` in `lib/extractDocText.ts` uses `pdf-parse`'s
+`getText()`, which only reads a PDF's embedded text layer - a scanned brand
+deck, or a "compressed"/flattened export where a compression tool rasterized
+every page into one embedded image (a common way those tools shrink file
+size, and a common real-world way a legit brand guidelines PDF ends up with
+zero extractable text), has nothing for it to read. When that happens,
+`renderPdfPagesAsImages()` (same file) renders up to the first
+`MAX_PDF_SCREENSHOT_PAGES` (8) pages to PNGs via `pdf-parse`'s
+`getScreenshot()` instead, and those get pushed into the same `images` array
+real screenshot uploads already use - no new dependency, `pdf-parse` ships
+`@napi-rs/canvas` for this already. **Caveat for anyone touching this:**
+`pdf-parse`'s `getText()` has a parameter-mutation quirk where, unless you
+explicitly pass `pageJoiner: ""`, it silently injects a
+`"-- page N of M --"` marker into every page's text - including a
+completely blank one - so `result.text.trim()` is never actually empty and
+this fallback would never fire. `extractTextFromFile()` already passes
+`pageJoiner: ""` to avoid this; don't drop it if you touch that call.
+
+**The "no readable text or images" error now says why, per file.** Before,
+`extractBrandProfileFromFiles()` threw one generic
+`"No readable text or images were found in those files."` whenever a batch
+ended up empty, discarding whatever specific reason each file actually
+failed for (a thrown extraction error, or - previously - a PDF silently
+contributing nothing). A file that completes without throwing but still
+contributes no text/images is now logged as its own per-file error with a
+specific reason, and the batch-level error appends every file's actual
+`name: reason` instead of staying generic - this is what actually explains
+"why" to someone staring at a failed upload, instead of a dead end.
+
 Every file's read/extract outcome (success or error, filename, timestamp,
 who uploaded it, and the client name typed in the form at the time, if any)
 is persisted to KV via `logBrandDocUpload()`/`listBrandDocLogs()` in

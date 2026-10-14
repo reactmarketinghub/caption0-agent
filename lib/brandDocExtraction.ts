@@ -1,7 +1,7 @@
 import { brandDocParseResultSchema, type BrandDocParseResult, type BrandProfile } from "./schemas";
 import { generateStructured, type ImageInput } from "./claudeGenerate";
 import { buildBrandDocParseSystemPrompt } from "./prompts";
-import { extractTextFromFile } from "./extractDocText";
+import { extractTextFromFile, renderPdfPagesAsImages } from "./extractDocText";
 import { logBrandDocUpload } from "./kv";
 
 const MAX_DOC_CHARS = 40000;
@@ -120,17 +120,47 @@ export async function extractBrandProfileFromFiles({
       if (!res.ok) throw new Error(`Could not download ${f.name}`);
       const buffer = Buffer.from(await res.arrayBuffer());
 
+      let contributed = false;
       const imageMediaType = IMAGE_MEDIA_TYPES[f.contentType];
       if (imageMediaType) {
         images.push({
           dataUrl: `data:${f.contentType};base64,${buffer.toString("base64")}`,
           mediaType: imageMediaType,
         });
+        contributed = true;
       } else {
         const text = await extractTextFromFile({ buffer, name: f.name, type: f.contentType });
-        if (text.trim()) textParts.push(`--- ${f.name} ---\n${text}`);
+        if (text.trim()) {
+          textParts.push(`--- ${f.name} ---\n${text}`);
+          contributed = true;
+        } else if (f.contentType === "application/pdf") {
+          // No text layer at all - likely a scanned or flattened/compressed
+          // PDF where every page is really one embedded image. Fall back to
+          // rendering pages as images so Claude's vision can still read it,
+          // instead of failing the file outright.
+          const pageDataUrls = await renderPdfPagesAsImages(buffer);
+          for (const dataUrl of pageDataUrls) {
+            images.push({ dataUrl, mediaType: "image/png" });
+          }
+          contributed = pageDataUrls.length > 0;
+        }
       }
-      outcomes.push({ name: f.name, status: "success" });
+
+      // A file that didn't throw but still produced nothing usable (empty
+      // doc, a PDF the screenshot fallback couldn't render anything from)
+      // is a real per-file failure, not a silent no-op - record it as one so
+      // its reason shows up in the activity log and the batch-level error
+      // below, instead of disappearing into a misleading "success".
+      outcomes.push(
+        contributed
+          ? { name: f.name, status: "success" }
+          : {
+              name: f.name,
+              status: "error",
+              error:
+                "No extractable text or images were found in this file - it may be empty or a format this tool can't read.",
+            },
+      );
     } catch (err) {
       console.error(`Brand doc file fetch/extract failed for ${f.name}:`, err);
       outcomes.push({
@@ -158,7 +188,15 @@ export async function extractBrandProfileFromFiles({
 
   if (!textParts.length && !images.length) {
     await flushLogs();
-    throw new BrandDocExtractionError("No readable text or images were found in those files.", 400);
+    // Surface each file's actual failure reason instead of one generic
+    // message - a specific pdf-parse/extraction error (or the reason above)
+    // is far more actionable than "no readable text or images" alone, which
+    // previously masked whatever really went wrong on a single-file upload.
+    const reasons = outcomes
+      .filter((o): o is FileOutcome & { error: string } => o.status === "error" && Boolean(o.error))
+      .map((o) => `${o.name}: ${o.error}`);
+    const detail = reasons.length ? ` ${reasons.join("; ")}` : "";
+    throw new BrandDocExtractionError(`No readable text or images were found in those files.${detail}`, 400);
   }
 
   const combinedText = textParts.join("\n\n").slice(0, MAX_DOC_CHARS);
