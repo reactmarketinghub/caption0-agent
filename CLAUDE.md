@@ -212,6 +212,23 @@ completely blank one - so `result.text.trim()` is never actually empty and
 this fallback would never fire. `extractTextFromFile()` already passes
 `pageJoiner: ""` to avoid this; don't drop it if you touch that call.
 
+**PDF parsing only works on Vercel because of `next.config.ts` - don't undo
+it.** `pdf-parse` -> `pdfjs-dist` polyfills `DOMMatrix` at runtime via
+`createRequire(import.meta.url)("@napi-rs/canvas")`. Bundled into a route
+chunk (Next's default), that lookup resolves from inside the bundle and the
+native canvas package - a dynamic require plus a platform-specific `.node`
+binary - is never traced into the deployed function, so *every* PDF failed in
+production with `DOMMatrix is not defined` while working locally (where
+`node_modules` sits right there). `serverExternalPackages` keeps `pdf-parse`,
+`pdfjs-dist` and `@napi-rs/canvas` as plain `node_modules` requires, and
+`outputFileTracingIncludes` ships them (including the `linux-x64-gnu` binary
+Vercel runs on) with exactly the two PDF-parsing routes
+(`/api/brand-doc/parse`, `/api/clients/[id]/brand-kit`) and no others. To
+re-verify after touching either option: `next build`, then check
+`.next/server/app/api/brand-doc/parse/route.js.nft.json` lists
+`@napi-rs/canvas-linux-x64-gnu/*.node`. If you ever add another route that
+parses PDFs, add it to `PDF_ROUTES` there.
+
 **The "no readable text or images" error now says why, per file.** Before,
 `extractBrandProfileFromFiles()` threw one generic
 `"No readable text or images were found in those files."` whenever a batch
