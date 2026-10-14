@@ -497,6 +497,22 @@ that block):
   surfacing the first one found. Both `/api/generate` and `/api/refine` pass
   `profile?.bannedWords` through.
 
+### Concrete anti-ad-copy rules (added after "still sounds weird" feedback)
+
+Abstract instructions ("don't sound like AI") weren't enough: captions still
+opened with rhetorical questions, shared one `Prime Day deals are live...
+Shop now on Amazon` skeleton, and used stock lines ("calling your name",
+"just got an upgrade"). `buildSystemPrompt()` now also appends
+`AD_COPY_CLICHES` (named patterns to avoid, at most one question opener per
+platform) and `VOICE_TEXTURE_GUIDANCE` (name something specific seen in the
+creative, deliberately different lengths across variants, a differently
+worded CTA per variant, a reread-and-rewrite self-check, one good/bad
+example pair). The "traffic" objective text in `config/objectives.ts` also
+no longer asks for a direct "shop now" ask in every caption - that wording
+was pushing all three variants to the same ending. Add to these lists when
+new stock phrasing shows up; don't remove them. Not yet validated against
+live output - check real generations after deploy.
+
 ## Generation must finish inside Vercel's 60s limit, and fail as JSON
 
 A live generation once showed `Unexpected token 'A', "An error o"... is not

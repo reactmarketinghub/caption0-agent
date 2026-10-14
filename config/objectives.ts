@@ -47,7 +47,7 @@ export const OBJECTIVE_RULES: Record<Objective, ObjectiveRule> = {
     label: "Traffic",
     description: "Goal is clicks/visits, not just reach.",
     styleGuidance:
-      "Optimize for immediate action: a clear, direct call-to-action to click the link, visit, or shop now. Minimize friction and get to the ask quickly rather than lingering on story/brand-building.",
+      "Optimize for immediate action: make it obvious where to click or go, with one clear but natural-sounding nudge to the link (not a stack of imperatives like \"Tap now, shop now, grab yours\"). Keep friction low and don't linger on brand-building, but a real person pointing a friend to a link beats a shouted command. Word the nudge differently in each variant.",
   },
   awareness: {
     id: "awareness",

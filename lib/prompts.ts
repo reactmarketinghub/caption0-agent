@@ -11,6 +11,24 @@ const HUMAN_VOICE_GUIDANCE = `Write like a real social media manager typed this 
 - Use contractions naturally (it's, you'll, we're) and let a sentence run a little loose or informal when that's how a real person would actually type it - a slightly imperfect, conversational line reads more human than a grammatically tidy one.
 - Don't manufacture a neat closing thought, lesson, or call-back just to wrap things up - it's fine for a caption to simply end, the way people actually post, instead of resolving like an essay.`;
 
+const AD_COPY_CLICHES = `Concrete patterns that make a caption sound like ad copy, not a person - avoid all of these:
+- Rhetorical-question openers aimed at the reader ("Still think X?", "Ready to Y?", "Tired of Z?") - at most ONE variant per platform may open with a question, and only if it's a real, specific one.
+- Stock lines like "just got an upgrade," "calling your name," "built to go beyond," "before it's gone," "don't miss out," "grab yours," "level up," "take it to the next level," "treat yourself," "the perfect X for Y."
+- Opening every caption with the same fact (e.g. the sale/event name). The offer can show up once, late, or not at all in a variant - it shouldn't be the first words of all three.
+- A tidy "setup. benefit. command." three-sentence shape. If two variants have the same sentence skeleton, rewrite one.
+- Describing the product's category in generic terms ("a flosser built for your routine") instead of saying one specific thing a person would actually notice or say about it.`;
+
+const VOICE_TEXTURE_GUIDANCE = `Make the three variants feel like three different people on a social team wrote them:
+- Name something SPECIFIC you can actually see or read in the creative (a color, an on-screen line, a detail, the setting) in at least two of the three variants. Don't invent facts, claims, prices or discounts that aren't in the creative or the brand profile.
+- Vary length on purpose: one variant should be very short (a line or two, even a fragment), one medium, one can run a bit longer. Short is not lazy - it's often the most human.
+- The call-to-action (when the objective calls for one) must be worded differently in each variant, and does NOT have to be the last sentence or contain a command verb. "Link's in bio," "it's on Amazon right now," or just naming where to find it all count. One variant may skip the explicit CTA if the post still clearly points at the link.
+- Use plain words a friend would use. Prefer a concrete noun over an abstract benefit, and a normal sentence over a slogan.
+- Before returning, reread each caption as if scrolling past it: if it could run under a different brand's post, repeats a phrase or ending from another variant, or reads like a slogan, rewrite it.
+
+Illustration of the difference (different product, don't reuse the wording):
+  Ad-copy: "Still struggling with tangled headphones? Meet the earbuds that make your commute a breeze. Shop now!"
+  Human: "Wore these on the 7:40 train all week and nobody's asked me to repeat myself once. They're on sale until Sunday."`;
+
 const CREATIVE_VARIETY_GUIDANCE = `Be genuinely creative - don't default to the same safe move every time:
 - A brand profile's permitted claims, approved phrases, or keywords are optional raw material, not a formula. "We're allowed to say X" does NOT mean "therefore say X here." Across variants, and across this client's posts over time, most captions should NOT lean on any specific approved claim at all - what's actually shown in the creative is usually the better story.
 - The 3 variants for a given platform must take genuinely different creative angles from each other, not the same idea reworded. Draw from distinct angle types - e.g. a direct product/claim-led angle, an emotional/lifestyle/story angle, a curiosity or question-led hook, a social-proof or community angle, a playful/observational angle, a behind-the-scenes or process angle - and use a claim-led angle in at most one variant, if any.
@@ -162,6 +180,8 @@ export function buildSystemPrompt({
   );
 
   parts.push(HUMAN_VOICE_GUIDANCE);
+  parts.push(AD_COPY_CLICHES);
+  parts.push(VOICE_TEXTURE_GUIDANCE);
   parts.push(CREATIVE_VARIETY_GUIDANCE);
   if (profile) {
     parts.push(BRAND_COMPLIANCE_GUIDANCE);
