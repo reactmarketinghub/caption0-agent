@@ -19,7 +19,8 @@ export type BrandKitFile = z.infer<typeof brandKitFileSchema>;
 export const brandProfileSchema = z.object({
   id: z.string(),
   clientName: z.string().min(1),
-  toneOfVoice: z.string().min(1),
+  // Optional: a profile with do's/don'ts/examples but no stated tone is still useful.
+  toneOfVoice: z.string().default(""),
   dos: z.array(z.string()).default([]),
   donts: z.array(z.string()).default([]),
   bannedWords: z.array(z.string()).default([]),

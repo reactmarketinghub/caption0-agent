@@ -80,7 +80,7 @@ export default async function ClientsListPage() {
             <li key={c.id} className="flex items-center justify-between p-4">
               <div>
                 <p className="font-medium">{c.clientName}</p>
-                <p className="line-clamp-1 text-sm text-muted-foreground">{c.toneOfVoice}</p>
+                <p className="line-clamp-1 text-sm text-muted-foreground">{c.toneOfVoice || "No tone of voice set"}</p>
               </div>
               <div className="flex items-center gap-2">
                 {c.isDraft && <Badge variant="secondary">Draft</Badge>}

@@ -77,7 +77,9 @@ function brandVoiceBlock(profile?: BrandProfile | null): string {
 
   const lines = [
     `Brand profile for ${profile.clientName}:`,
-    `Tone of voice: ${profile.toneOfVoice}`,
+    profile.toneOfVoice
+      ? `Tone of voice: ${profile.toneOfVoice}`
+      : `Tone of voice: not stated. Work out the voice from this client's do's, don'ts, keywords and example captions below (they are the real signal), and from the creative itself.`,
   ];
   if (profile.dos.length)
     lines.push(

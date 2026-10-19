@@ -238,8 +238,8 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
   }
 
   async function handleSave() {
-    if (!state.clientName.trim() || !state.toneOfVoice.trim()) {
-      setError("Client name and tone of voice are required.");
+    if (!state.clientName.trim()) {
+      setError("Client name is required.");
       return;
     }
     setSaving(true);
@@ -447,10 +447,13 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
         {detailsOpen && (
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="toneOfVoice">Tone of voice</Label>
+            <Label htmlFor="toneOfVoice">
+              Tone of voice <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
             <Textarea
               id="toneOfVoice"
               rows={2}
+              placeholder="Leave blank if the rules and examples below already say it"
               value={state.toneOfVoice}
               onChange={(e) => set("toneOfVoice", e.target.value)}
             />

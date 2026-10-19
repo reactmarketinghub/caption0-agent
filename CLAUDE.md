@@ -272,7 +272,10 @@ strict profile schema, so a campaign deck with no tone of voice
 (`toneOfVoice` min 1), a `null` list/text field, or more than 10 example
 captions failed zod validation twice and threw. It's now its own lenient
 schema in `lib/schemas.ts` (nulls/missing -> empty, captions trimmed to 10);
-the admin fills gaps in the review step and saving still requires a tone. The
+the admin fills gaps in the review step. Tone of voice is optional everywhere
+(schema `.default("")`, form only requires a client name): when it's blank,
+`brandVoiceBlock()` tells Claude to work the voice out from the do's, don'ts,
+keywords and example captions instead. The
 Claude step also uses `effort: "low"`, a time budget of what's left of the
 route's 60s, and `describeParseFailure()` (`lib/brandDocExtraction.ts`) turns
 timeouts / too-large / busy errors into specific messages that are also
