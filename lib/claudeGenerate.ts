@@ -65,7 +65,7 @@ export interface GenerateStructuredArgs<T> {
 const WEB_SEARCH_TOOL: Anthropic.WebSearchTool20250305 = {
   type: "web_search_20250305",
   name: "web_search",
-  max_uses: 2,
+  max_uses: 1,
 };
 
 export interface GenerateStructuredResult<T> {

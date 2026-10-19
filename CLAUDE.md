@@ -477,15 +477,17 @@ things now work together against that:
    within one generation's 3 variants. Mode B (no `clientId`) has no identity
    to key this on, so it's skipped there.
 3. **Real web search, not just reasoning over what's already on file.**
-   `/api/generate` passes `enableWebSearch: true` to `generateStructured()`
+   When there's no client profile, `/api/generate` passes `enableWebSearch: true` to `generateStructured()`
    (`lib/claudeGenerate.ts`), which binds Anthropic's server-side
-   `web_search_20250305` tool (capped at `max_uses: 3` to bound latency/cost -
+   `web_search_20250305` tool (capped at `max_uses: 1` to bound latency/cost -
    it's a server tool, so the search and the final answer come back in one
    API response, no extra round trip needed on our end). `buildSystemPrompt()`'s
    `WEB_SEARCH_GUIDANCE` tells Claude to use it sparingly, only to confirm a
    specific current fact not already in the brand profile or to get a quick
    read on what's relevant right now - not as a routine step. Only
-   `/api/generate` gets this tool (not `/api/refine`, which only tweaks one
+   `/api/generate`, and only when no client profile is selected, gets this tool
+   (a profile already carries the brand facts and each search adds seconds),
+   not `/api/refine`, which only tweaks one
    already-written caption and doesn't need fresh research).
 
 Because Claude's response can now interleave narration/text blocks around
@@ -575,7 +577,7 @@ replies with a plain-text error page, which the browser then fed to
   `MAX_OUTPUT_TOKENS = 8192` in `lib/anthropic.ts` (Sonnet 5's default effort
   is "high"; adaptive thinking also counts toward `max_tokens`, so a tight cap
   truncated the JSON and forced a second full attempt), and web search is
-  capped at `max_uses: 2`. Raise effort / searches back if captions look thin
+  capped at `max_uses: 1` (and skipped entirely when a client profile is selected). Raise effort / searches back if captions look thin
   and the time budget allows, or raise `maxDuration` if the Vercel plan does.
 
 Each attempt logs one JSON line (`evt`, `attempt`, `elapsedMs`, `stopReason`,
@@ -595,6 +597,24 @@ prefix, `isApiKeyProblem()` + `API_KEY_PROBLEM_MESSAGE` turn a 401/403 into a
 plain "ask an admin to update the key" message on generate, refine and
 brand-doc import, and `/api/debug/env-check` reports whether the key looks
 right (`sk-ant-` prefix, stray whitespace/quotes) without revealing it.
+
+### Generation runs one request per platform, in parallel
+
+`/api/generate` used to ask Claude for every selected platform's captions in
+one request, so the time added up (Instagram + Facebook + TikTok + LinkedIn
+written one after another, plus any web search) and runs could hit the
+50s/60s limit ("taking too long"). It now fires one `generateStructured()`
+call per selected platform with `Promise.allSettled`, each with
+`buildSystemPrompt({ platforms: [platform] })`, and merges the results in the
+requested platform order (`inferred_voice` is the first non-empty one; usage is
+summed; any platform failing fails the whole request with the same friendly
+errors). Wall-clock is about the slowest single platform instead of the sum
+(verified with a stubbed API: 4 platforms x 4s -> ~5s total vs ~16s).
+Trade-off: the creative's images are sent once per platform call (more input
+tokens), and platforms are written independently, so there's no
+cross-platform coordination beyond the shared brand profile and recent-angles
+list. Web search is off when a client profile exists and capped at one search
+otherwise.
 
 ## Every Vercel deployment keeps its own permanent URL
 

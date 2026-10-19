@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateRequestSchema, generationResponseSchema } from "@/lib/schemas";
+import { generateRequestSchema, generationResponseSchema, type GenerationResponse } from "@/lib/schemas";
 import { generateStructured, imagesWithVideoLabels, GenerationTimeoutError } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { validateGenerationResponse } from "@/lib/generationValidation";
@@ -58,16 +58,6 @@ export async function POST(req: Request) {
   const profile = clientId ? await getBrandProfile(clientId) : null;
   const recentAngles = clientId ? await getRecentAngles(clientId) : [];
 
-  const system = buildSystemPrompt({
-    profile,
-    postFormat,
-    objective,
-    platforms,
-    creativeType,
-    videoLooksVoHeavy,
-    recentAngles,
-    webSearchEnabled: true,
-  });
   const userText =
     creativeType === "video"
       ? "Here are the extracted video frames in chronological order. Generate the captions now."
@@ -75,15 +65,54 @@ export async function POST(req: Request) {
         ? "Here are the carousel images in story order. Generate the captions now."
         : "Here is the creative. Generate the captions now.";
 
+  // A client profile already carries the brand facts, so only search the web
+  // when there isn't one - each search adds several seconds, and this route has
+  // to finish inside the function time limit.
+  const webSearch = !profile;
+  const labelledImages = imagesWithVideoLabels(images, creativeType, videoFrameTimestamps);
+
   try {
-    const { data, usage } = await generateStructured({
-      system,
-      userText,
-      images: imagesWithVideoLabels(images, creativeType, videoFrameTimestamps),
-      schema: generationResponseSchema,
-      validate: (d) => validateGenerationResponse(d, postFormat, profile?.bannedWords),
-      enableWebSearch: true,
-    });
+    // One request per platform, run in parallel. A single request that writes
+    // every platform's captions one after another took as long as all of them
+    // added together (the main cause of "taking too long"); in parallel the
+    // whole thing takes about as long as the slowest single platform.
+    const settled = await Promise.allSettled(
+      platforms.map((platform) =>
+        generateStructured({
+          system: buildSystemPrompt({
+            profile,
+            postFormat,
+            objective,
+            platforms: [platform],
+            creativeType,
+            videoLooksVoHeavy,
+            recentAngles,
+            webSearchEnabled: webSearch,
+          }),
+          userText,
+          images: labelledImages,
+          schema: generationResponseSchema,
+          validate: (d) => validateGenerationResponse(d, postFormat, profile?.bannedWords),
+          enableWebSearch: webSearch,
+        }),
+      ),
+    );
+
+    const failure = settled.find((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (failure) throw failure.reason;
+
+    const results = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    const data: GenerationResponse = {
+      inferred_voice: results.map((r) => r.data.inferred_voice).find(Boolean),
+      platforms: results.map((r, i) => {
+        const entry = r.data.platforms.find((p) => p.platform === platforms[i]) ?? r.data.platforms[0];
+        return { ...entry, platform: platforms[i] };
+      }),
+    };
+    const usage = {
+      inputTokens: results.reduce((n, r) => n + r.usage.inputTokens, 0),
+      outputTokens: results.reduce((n, r) => n + r.usage.outputTokens, 0),
+    };
 
     if (clientId) {
       const newAngles = data.platforms.flatMap((p) =>
