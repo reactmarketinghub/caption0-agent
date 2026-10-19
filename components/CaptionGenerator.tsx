@@ -144,27 +144,24 @@ export function CaptionGenerator() {
           )}
 
           {creativeType === "video" && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Film className="h-4 w-4" />
-              <span>
-                {assets.length} frames extracted (no audio is sent or analyzed).
-                {looksVoHeavy &&
-                  " This looks voiceover/dialogue-heavy - captions will lean on visuals and on-screen text only."}
-              </span>
-            </div>
-          )}
-          {creativeType === "video" && (
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {assets.map((a) => (
-                // eslint-disable-next-line @next/next/no-img-element
+            <>
+              <div className="flex justify-center rounded-lg border bg-muted p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  key={a.id}
-                  src={a.dataUrl}
-                  alt={`Frame at ${a.timestampSec?.toFixed(1)}s`}
-                  className="h-20 w-auto flex-shrink-0 rounded border object-cover"
+                  src={assets[0].dataUrl}
+                  alt="Video preview"
+                  className="h-64 max-w-full rounded object-contain sm:h-80"
                 />
-              ))}
-            </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Film className="h-4 w-4 shrink-0" />
+                <span>
+                  Visuals only - no audio is analyzed.
+                  {looksVoHeavy &&
+                    " This looks voiceover/dialogue-heavy - captions will lean on visuals and on-screen text only."}
+                </span>
+              </div>
+            </>
           )}
         </div>
       )}

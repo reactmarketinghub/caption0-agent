@@ -25,6 +25,27 @@ const INSTRUCTION_TEXT: Record<RefineRequest["instruction"], string> = {
   ...Object.fromEntries(LIVELIER_IDS.map((id) => [id, LIVELIER_OPTIONS[id].instruction])),
 } as Record<RefineRequest["instruction"], string>;
 
+// A single-caption rewrite doesn't need every frame of a long video - send an
+// evenly spaced subset (first and last included) so Regenerate/Shorter/Livelier
+// stay quick. Static/carousel creatives pass through untouched.
+const MAX_REFINE_FRAMES = 12;
+
+function thinFramesForRefine(
+  images: string[],
+  creativeType: "static" | "carousel" | "video",
+  timestamps?: number[],
+): [string[], "static" | "carousel" | "video", number[] | undefined] {
+  if (creativeType !== "video" || images.length <= MAX_REFINE_FRAMES) return [images, creativeType, timestamps];
+  const keep = Array.from({ length: MAX_REFINE_FRAMES }, (_, i) =>
+    Math.round((i * (images.length - 1)) / (MAX_REFINE_FRAMES - 1)),
+  );
+  return [
+    keep.map((i) => images[i]),
+    creativeType,
+    timestamps && timestamps.length === images.length ? keep.map((i) => timestamps[i]) : timestamps,
+  ];
+}
+
 export async function POST(req: Request) {
   let userEmail: string;
   try {
@@ -77,7 +98,7 @@ export async function POST(req: Request) {
     const { data, usage } = await generateStructured({
       system,
       userText,
-      images: imagesWithVideoLabels(images, creativeType, videoFrameTimestamps),
+      images: imagesWithVideoLabels(...thinFramesForRefine(images, creativeType, videoFrameTimestamps)),
       schema: refineResponseSchema,
       validate: (d) =>
         combineViolations(

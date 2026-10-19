@@ -1,9 +1,20 @@
 "use client";
 
-const FRAME_COUNT = 7; // final frames sent to Claude, within the 6-8 spec range
-// Cheap low-res probes (see grayscaleSignature) used only to find where the
-// video actually changes - not sent to Claude and not part of FRAME_COUNT.
-const PROBE_COUNT = 16;
+// "Key" frames: the scene-aware picks (plus the hook), kept at full resolution so
+// on-screen text stays legible. Everything else is a small, cheap "extra" frame.
+const FRAME_COUNT = 7;
+// As many frames as the request can carry: one every PROBE_INTERVAL_SEC, up to
+// MAX_PROBE_COUNT (never fewer than MIN_PROBE_COUNT). Each probe doubles as a
+// small extra frame, so more coverage costs one extra seek, not a second pass.
+const PROBE_INTERVAL_SEC = 0.75;
+const MIN_PROBE_COUNT = 16;
+const MAX_PROBE_COUNT = 48;
+const EXTRA_FRAME_LONG_EDGE = 640;
+const EXTRA_FRAME_QUALITY = 0.6;
+// The frames travel in one JSON request to /api/generate, and Vercel rejects a
+// request body over ~4.5MB. Stay safely under it (JSON + the rest of the body
+// need room too) by thinning extra frames if the set is too big.
+const MAX_TOTAL_DATAURL_CHARS = 3_600_000;
 const HOOK_TIMESTAMP_SEC = 0.5;
 const TINY_SIZE = 24; // for cheap frame-diff heuristic
 
@@ -151,18 +162,53 @@ function meanAbsDiff(a: number[], b: number[]): number {
 }
 
 /**
- * Extracts up to FRAME_COUNT frames from a video file (always including a
- * ~0.5s "hook" frame), resized/encoded the same way as static images, plus a
+ * Combines the sharp key frames with the small extra frames (a key frame
+ * replaces the extra taken at the same moment), in time order, then thins the
+ * extras - never the key frames - until the whole set fits the request budget.
+ * Thinning always drops the extra whose neighbours are closest together, so
+ * coverage of the video stays as even as possible.
+ */
+export function mergeAndFit(keyFrames: ExtractedFrame[], extraFrames: ExtractedFrame[]): ExtractedFrame[] {
+  const isKey = new Set(keyFrames);
+  const extras = extraFrames.filter(
+    (e) => !keyFrames.some((k) => Math.abs(k.timestampSec - e.timestampSec) < 0.02),
+  );
+  const all = [...keyFrames, ...extras].sort((a, b) => a.timestampSec - b.timestampSec);
+  let total = all.reduce((n, f) => n + f.dataUrl.length, 0);
+
+  while (total > MAX_TOTAL_DATAURL_CHARS) {
+    let dropAt = -1;
+    let smallestGap = Infinity;
+    for (let i = 0; i < all.length; i++) {
+      if (isKey.has(all[i])) continue;
+      const prev = all[i - 1]?.timestampSec ?? all[i].timestampSec;
+      const next = all[i + 1]?.timestampSec ?? all[i].timestampSec;
+      const gap = next - prev;
+      if (gap < smallestGap) {
+        smallestGap = gap;
+        dropAt = i;
+      }
+    }
+    if (dropAt === -1) break; // only key frames left
+    total -= all[dropAt].dataUrl.length;
+    all.splice(dropAt, 1);
+  }
+  return all;
+}
+
+/**
+ * Extracts as many frames as the request can carry from a video file: a few
+ * full-resolution key frames (scene cuts plus a ~0.5s "hook" frame) and up to
+ * ~48 small frames spread across the whole video, plus a
  * cheap heuristic guess at whether the video looks VO-heavy (see threshold
  * comments above). Everything runs in the browser; the raw video is never
  * uploaded for this step.
  *
- * Two passes: first a cheap low-res probe pass across the whole video to
- * find where it actually changes (scene cuts) vs. where it's static, then a
- * second pass that seeks to only the chosen timestamps to capture the real
- * frames - so the extra probing cost stays small (tiny 24x24 reads) while
- * the frames actually sent to Claude land where the content changes instead
- * of an arbitrary uniform grid.
+ * Two passes: first one sweep across the whole video that records both a tiny
+ * signature (to find where it actually changes - scene cuts vs. static shots)
+ * and a small JPEG per probe, then a second pass that re-captures only the
+ * chosen key timestamps at full resolution, so the frames that matter most
+ * (cuts, the hook) are sharp enough to read on-screen text from.
  */
 export async function extractVideoFrames(file: File): Promise<VideoFrameExtractionResult> {
   const { resizeCanvasSource } = await import("./resizeImage");
@@ -184,21 +230,39 @@ export async function extractVideoFrames(file: File): Promise<VideoFrameExtracti
 
     const duration = video.duration || 0;
 
-    const probeTimestamps = evenlySpaced(PROBE_COUNT, duration);
+    // Pass 1: one pass over the whole video. Each probe records a tiny
+    // signature (to find where the video changes) and a small JPEG (an extra
+    // frame to send as-is).
+    const probeCount = Math.min(
+      MAX_PROBE_COUNT,
+      Math.max(MIN_PROBE_COUNT, Math.ceil(duration / PROBE_INTERVAL_SEC) + 1),
+    );
+    const probeTimestamps = evenlySpaced(probeCount, duration);
     const probeSignatures: number[][] = [];
+    const extraFrames: ExtractedFrame[] = [];
     for (const t of probeTimestamps) {
       await seekTo(video, t);
       probeSignatures.push(grayscaleSignature(video));
+      extraFrames.push({
+        dataUrl: resizeCanvasSource(
+          video,
+          video.videoWidth,
+          video.videoHeight,
+          EXTRA_FRAME_LONG_EDGE,
+          EXTRA_FRAME_QUALITY,
+        ),
+        timestampSec: t,
+      });
     }
 
-    const timestamps = pickSceneAwareTimestamps(duration, probeTimestamps, probeSignatures);
-
-    const frames: ExtractedFrame[] = [];
+    // Pass 2: re-capture the scene-aware key frames at full resolution.
+    const keyTimestamps = pickSceneAwareTimestamps(duration, probeTimestamps, probeSignatures);
+    const keyFrames: ExtractedFrame[] = [];
     const signatures: number[][] = [];
-    for (const t of timestamps) {
+    for (const t of keyTimestamps) {
       await seekTo(video, t);
       const dataUrl = resizeCanvasSource(video, video.videoWidth, video.videoHeight);
-      frames.push({ dataUrl, timestampSec: t });
+      keyFrames.push({ dataUrl, timestampSec: t });
       signatures.push(grayscaleSignature(video));
     }
 
@@ -209,7 +273,7 @@ export async function extractVideoFrames(file: File): Promise<VideoFrameExtracti
     const avgDiff = signatures.length > 1 ? totalDiff / (signatures.length - 1) : 0;
     const looksVoHeavy = avgDiff > FAST_CUT_THRESHOLD || avgDiff < STATIC_SHOT_THRESHOLD;
 
-    return { frames, looksVoHeavy, durationSec: duration };
+    return { frames: mergeAndFit(keyFrames, extraFrames), looksVoHeavy, durationSec: duration };
   } finally {
     URL.revokeObjectURL(url);
   }

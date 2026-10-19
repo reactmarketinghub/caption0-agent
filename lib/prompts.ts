@@ -170,10 +170,10 @@ export function buildSystemPrompt({
 
   if (creativeType === "video") {
     parts.push(
-      `The creative is a video. You are shown several evenly-spaced extracted frames, each labeled with its approximate timestamp, including an early frame around the 0.5s mark (the "hook" moment). You CANNOT hear this video's audio. Base captions strictly on the visuals and any on-screen text/captions visible in the frames. Do NOT guess at, invent, or paraphrase spoken dialogue or voiceover content — keep the caption grounded in what is visually shown.`,
+      `The creative is a video. You are shown many extracted frames in chronological order (a few are sharper key frames at scene changes), each labeled with its approximate timestamp, including an early frame around the 0.5s mark (the "hook" moment). You CANNOT hear this video's audio. Base captions strictly on the visuals and any on-screen text/captions visible in the frames. Do NOT guess at, invent, or paraphrase spoken dialogue or voiceover content — keep the caption grounded in what is visually shown.`,
     );
     parts.push(
-      `These frames are sparse, non-continuous samples, not a flipbook of consecutive moments — real seconds (sometimes several) pass between one frame and the next, often with cuts, camera moves, or scene changes you aren't shown. Do not narrate a blow-by-blow sequence as if one frame leads directly into the next, and do not invent a transition, action, or causal link between frames that isn't independently visible in each one. Instead, form an overall impression from the full set of frames (subject, setting, product, mood, on-screen text) and write the caption from that — the same way you would from a single well-chosen photo: specific and confident about what's actually shown, silent about what isn't.`,
+      `These frames are samples, not continuous footage. Use the timestamps: where frames are under a second or two apart you can follow what changes (a product reveal, text appearing, a scene change) and use that; where there are bigger gaps, real seconds passed with cuts or camera moves you can't see, so don't narrate a blow-by-blow or invent a transition, action, or causal link between frames that isn't independently visible. Form an overall impression from the full set (subject, setting, product, mood, on-screen text) and write the caption from that — specific and confident about what's actually shown, silent about what isn't.`,
     );
     if (videoLooksVoHeavy) {
       parts.push(

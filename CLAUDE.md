@@ -400,27 +400,30 @@ conservative, since it's flagged there but not surfaced as a manual
 brief-me nudge (there's no brief field). Tune `FAST_CUT_THRESHOLD` /
 `STATIC_SHOT_THRESHOLD` after looking at real client videos.
 
-**Frame selection is scene-aware, not a fixed uniform grid.** Extraction is
-two passes: first a cheap low-res probe pass (`PROBE_COUNT` = 16, tiny 24x24
-reads, same `grayscaleSignature()`/`meanAbsDiff()` used for the VO-heavy
-heuristic) samples evenly across the whole video, then `pickSceneAwareTimestamps()`
-splits that probed range into `FRAME_COUNT - 1` equal-duration buckets (plus
-the always-included ~0.5s hook) and has each bucket contribute whichever of
-its own probes differs most from the probe right before it - so a real cut
-gets captured precisely instead of landing between two uniform-grid frames,
-while a locked-off static shot still gets one frame per bucket exactly like
-the old uniform sampling did. A second pass then seeks only to those chosen
-timestamps to capture the real frames actually sent to Claude. Coverage of
-the full video is guaranteed by construction (one pick per bucket, buckets
-span the whole duration) - an earlier draft instead globally ranked every
-probe by activity and tie-broke by chronological order, which let a run of
-equally-"inactive" early probes silently fill the whole frame quota and
-leave most of the video unsampled whenever there wasn't a strong dominant
-cut (verified wrong with a synthetic static-video test before shipping the
-bucketed version instead). `PROBE_COUNT` is a starting point like the VO-heavy
-thresholds above - raise it if per-bucket resolution looks too coarse on
-real videos, at the cost of more seeks (16 probes + up to 7 final frames
-per upload today).
+**Frame selection: as many frames as fit, with a few sharp key frames.** Extraction
+(`lib/client/extractVideoFrames.ts`) is two passes. Pass 1 sweeps the whole video
+once, one probe every `PROBE_INTERVAL_SEC` (0.75s) - between `MIN_PROBE_COUNT` (16)
+and `MAX_PROBE_COUNT` (48) probes - and each probe records a tiny 24x24 grayscale
+signature (the same `grayscaleSignature()`/`meanAbsDiff()` used for the VO-heavy
+heuristic) *and* a small 640px JPEG (an "extra" frame). `pickSceneAwareTimestamps()`
+then splits the probed range into `FRAME_COUNT - 1` equal-duration buckets (plus the
+always-included ~0.5s hook) and each bucket contributes whichever of its probes
+differs most from the one before it, so a real cut is captured precisely while a
+static shot still gets even coverage. Pass 2 re-captures just those 7 key
+timestamps at full 1568px so on-screen text stays legible. `mergeAndFit()` replaces
+the extra taken at each key moment with the sharp key frame, sorts by time, and
+if the set is over `MAX_TOTAL_DATAURL_CHARS` (3.6M) thins *extras only*, always
+dropping the one whose neighbours are closest, so coverage stays even. That budget
+exists because the frames travel in one JSON body to `/api/generate` and Vercel
+rejects bodies over ~4.5MB. Result: a 24s clip sends ~34 frames (~2MB); busy long
+footage keeps fewer extras but never loses key frames. More frames means more
+input tokens per call (and generate makes one call per platform), so raise
+`MAX_PROBE_COUNT` knowing it costs money and a little latency; the old
+global-activity-ranking draft clustered picks early, which is why picks are
+per-bucket. The UI deliberately shows only a spinner while this runs and one
+preview image afterwards (no progress text, no frame strip). `/api/refine` sends
+only 12 evenly spaced frames of a video (`thinFramesForRefine`) since a one-caption
+rewrite doesn't need dozens; static and carousel creatives are untouched.
 
 **Frames are labeled with their timestamp, not sent as a bare image stack.**
 Each extracted frame already carried a `timestampSec` client-side

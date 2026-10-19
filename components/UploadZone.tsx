@@ -121,8 +121,10 @@ export function UploadZone({ onLoaded, disabled }: UploadZoneProps) {
       >
         {isProcessing ? (
           <>
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Processing creative...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
+            <span className="sr-only" role="status">
+              Processing creative
+            </span>
           </>
         ) : (
           <>
