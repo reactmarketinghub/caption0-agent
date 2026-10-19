@@ -42,7 +42,7 @@ components/
   CaptionGenerator.tsx          Main page orchestrator (client component)
   PostSettingsFields.tsx        Post format / objective controls (config/objectives.ts driven)
   PlatformPicker.tsx            Platform toggle buttons grouped by network (Meta: Instagram + Facebook, TikTok, LinkedIn; config/platforms.ts driven) - see "Platform selection" below
-  CaptionResults.tsx / CaptionVariantCard.tsx    Per-platform tabs, copy/regenerate/shorter/livelier
+  CaptionResults.tsx / CaptionVariantCard.tsx    Per-platform tabs, copy/regenerate/shorter/tone
   BrandProfileForm.tsx          Admin create/edit form, incl. "import from doc" flow
   BrandKitSection.tsx           Brand kit uploads; auto-extracts guidelines from doc-type files into the profile
 
@@ -549,16 +549,16 @@ banned words. If the client's profile rules out exclamation marks - `allowsExcla
 reads their don'ts / emoji rules / CTA style / banned words for "exclamation ..." or a "!"
 next to a negation like no/never/avoid/don't - the logic flips: `NO_EXCLAMATION_GUIDANCE`
 goes in the prompt and `validateNoExclamation()` retries any caption containing a "!"
-(also on the `/api/refine` buttons, so Livelier can't sneak one in). The brand's rules
+(also on the `/api/refine` buttons, so a Tone option can't sneak one in). The brand's rules
 always beat the house style; a false-positive match errs on the side of no "!". When
 adding to this, keep `generate` and `refine` in step (`exclamation: "require" | "forbid"`).
 
-### Refine buttons: Livelier options
+### Refine buttons: Tone options
 
-A caption card offers Copy / Regenerate / Shorter / **Livelier**. Livelier opens
+A caption card offers Copy / Regenerate / Shorter / **Tone**. Tone opens
 an inline row of options (More playful, More energetic, More chatty, Funnier,
 Bolder) defined in `config/refinements.ts` - edit that file to reword or add
-one (add the id to `LIVELIER_IDS` and an entry in `LIVELIER_OPTIONS`; the
+one (add the id to `TONE_IDS` and an entry in `TONE_OPTIONS`; the
 refine schema, route and card all read from it). Each option sends its id as
 the `/api/refine` `instruction`; the old single "Punchier" button is gone.
 

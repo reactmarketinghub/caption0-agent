@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LIVELIER_IDS } from "@/config/refinements";
+import { TONE_IDS } from "@/config/refinements";
 
 export const platformIdSchema = z.enum(["instagram", "tiktok", "facebook", "linkedin"]);
 export const postFormatSchema = z.enum(["grid", "dark-post"]);
@@ -138,6 +138,6 @@ export const refineRequestSchema = z.object({
   videoLooksVoHeavy: z.boolean().optional(),
   videoFrameTimestamps: z.array(z.number()).optional(),
   currentCaption: z.string(),
-  instruction: z.enum(["regenerate", "shorter", ...LIVELIER_IDS]),
+  instruction: z.enum(["regenerate", "shorter", ...TONE_IDS]),
 });
 export type RefineRequest = z.infer<typeof refineRequestSchema>;

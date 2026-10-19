@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { refineRequestSchema, captionVariantSchema, type RefineRequest } from "@/lib/schemas";
-import { LIVELIER_IDS, LIVELIER_OPTIONS } from "@/config/refinements";
+import { TONE_IDS, TONE_OPTIONS } from "@/config/refinements";
 import { generateStructured, imagesWithVideoLabels, GenerationTimeoutError } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
 import {
@@ -22,11 +22,11 @@ const refineResponseSchema = z.object({ variant: captionVariantSchema });
 const INSTRUCTION_TEXT: Record<RefineRequest["instruction"], string> = {
   regenerate: "Write a fresh alternative caption for this same platform and creative - a different angle, not a minor tweak.",
   shorter: "Rewrite this caption to be noticeably shorter while keeping the same core message and CTA.",
-  ...Object.fromEntries(LIVELIER_IDS.map((id) => [id, LIVELIER_OPTIONS[id].instruction])),
+  ...Object.fromEntries(TONE_IDS.map((id) => [id, TONE_OPTIONS[id].instruction])),
 } as Record<RefineRequest["instruction"], string>;
 
 // A single-caption rewrite doesn't need every frame of a long video - send an
-// evenly spaced subset (first and last included) so Regenerate/Shorter/Livelier
+// evenly spaced subset (first and last included) so Regenerate/Shorter/Tone
 // stay quick. Static/carousel creatives pass through untouched.
 const MAX_REFINE_FRAMES = 12;
 

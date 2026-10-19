@@ -1,19 +1,19 @@
 /**
- * The "Livelier" options on a caption's refine menu - each one asks Claude to
+ * The "Tone" options on a caption's refine menu - each one asks Claude to
  * rewrite that single caption in a particular direction. Edit freely: reword an
  * instruction, change a label, or add an option by adding its id to
- * LIVELIER_IDS and an entry below (nothing else needs to change).
+ * TONE_IDS and an entry below (nothing else needs to change).
  */
-export const LIVELIER_IDS = ["playful", "energetic", "chatty", "funnier", "bolder"] as const;
-export type LivelierId = (typeof LIVELIER_IDS)[number];
+export const TONE_IDS = ["playful", "energetic", "chatty", "funnier", "bolder"] as const;
+export type ToneId = (typeof TONE_IDS)[number];
 
-export interface LivelierOption {
+export interface ToneOption {
   label: string;
   /** The instruction sent to Claude along with the current caption. */
   instruction: string;
 }
 
-export const LIVELIER_OPTIONS: Record<LivelierId, LivelierOption> = {
+export const TONE_OPTIONS: Record<ToneId, ToneOption> = {
   playful: {
     label: "More playful",
     instruction:
