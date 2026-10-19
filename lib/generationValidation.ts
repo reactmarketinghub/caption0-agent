@@ -1,6 +1,6 @@
 import { PLATFORM_RULES, getEffectiveCharLimit, type PlatformId } from "@/config/platforms";
 import type { PostFormat } from "@/config/objectives";
-import type { CaptionVariant, GenerationResponse } from "./schemas";
+import type { BrandProfile, CaptionVariant, GenerationResponse } from "./schemas";
 
 /**
  * Checked as a `generateStructured` `validate` callback - the character
@@ -51,10 +51,36 @@ export function combineViolations(...messages: Array<string | null>): string | n
   return present.length ? present.join(" ") : null;
 }
 
+/**
+ * Whether the "at least one variant uses an exclamation mark" rule applies for
+ * this client. A brand profile that says no exclamation marks (in its don'ts,
+ * banned words or emoji/punctuation rules) wins - the brand's hard rules come
+ * before the house style.
+ */
+export function allowsExclamation(profile?: BrandProfile | null): boolean {
+  if (!profile) return true;
+  const rules = [...profile.donts, ...profile.bannedWords, profile.emojiRules, profile.ctaStyle];
+  if (profile.bannedWords.some((w) => w.includes("!"))) return false;
+  return !rules.some((r) => /exclamation|\bno\s+!|\bnever\b[^.]*!|!\s*marks?/i.test(r));
+}
+
+/**
+ * At least one of a platform's variants should use a "!" - otherwise every
+ * caption ends on a full stop and the set reads flat and samey. One is enough;
+ * the rest can stay as they are.
+ */
+export function validateExclamationMix(data: GenerationResponse): string | null {
+  const missing = data.platforms.filter((p) => !p.variants.some((v) => v.caption.includes("!")));
+  if (!missing.length) return null;
+  const names = missing.map((p) => PLATFORM_RULES[p.platform].label).join(", ");
+  return `None of the ${names} variants uses an exclamation mark. Rewrite at least one of them so it uses a "!" naturally (to end a line or mark a genuinely upbeat moment - not shouty, never "!!"), still inside the character limit. The other variants can stay as they are.`;
+}
+
 export function validateGenerationResponse(
   data: GenerationResponse,
   postFormat: PostFormat | undefined,
   bannedWords: string[] = [],
+  options: { requireExclamation?: boolean } = {},
 ): string | null {
   const violations = data.platforms.flatMap((p) =>
     p.variants.flatMap((v, i) => {
@@ -64,6 +90,14 @@ export function validateGenerationResponse(
       return msgs.map((msg) => `Variant ${i + 1}: ${msg}`);
     }),
   );
-  if (!violations.length) return null;
-  return `Some captions violated hard requirements and must be rewritten (only these need changing, keep the rest as-is):\n${violations.join("\n")}`;
+  const mix = options.requireExclamation ? validateExclamationMix(data) : null;
+  if (!violations.length && !mix) return null;
+  const parts: string[] = [];
+  if (violations.length) {
+    parts.push(
+      `Some captions violated hard requirements and must be rewritten (only these need changing, keep the rest as-is):\n${violations.join("\n")}`,
+    );
+  }
+  if (mix) parts.push(mix);
+  return parts.join("\n");
 }

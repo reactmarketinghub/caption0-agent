@@ -1,6 +1,7 @@
 import { PLATFORM_RULES, type PlatformId } from "@/config/platforms";
 import { POST_FORMAT_RULES, OBJECTIVE_RULES, type PostFormat, type Objective } from "@/config/objectives";
 import type { BrandProfile } from "./schemas";
+import { allowsExclamation } from "./generationValidation";
 
 const HUMAN_VOICE_GUIDANCE = `Write like a real social media manager typed this between other tasks, not like an AI. Concretely:
 - Skip stock AI phrasing: "elevate," "unlock," "unleash," "game-changer," "dive in," "in today's world," "look no further," "whether you're X or Y." If a phrase sounds like it belongs in every other brand's caption too, cut it.
@@ -28,6 +29,8 @@ const VOICE_TEXTURE_GUIDANCE = `Make the three variants feel like three differen
 Illustration of the difference (different product, don't reuse the wording):
   Ad-copy: "Still struggling with tangled headphones? Meet the earbuds that make your commute a breeze. Shop now!"
   Human: "Wore these on the 7:40 train all week and nobody's asked me to repeat myself once. They're on sale until Sunday."`;
+
+const EXCLAMATION_GUIDANCE = `Punctuation mix: don't let every caption end on a full stop. For each platform, at least one of the 3 variants must use an exclamation mark - to end a line or to mark a genuinely upbeat moment - so the set doesn't read flat. One or two of the three is plenty: never "!!" or a string of them, and not on a caption whose tone is genuinely serious.`;
 
 const CREATIVE_VARIETY_GUIDANCE = `Be genuinely creative - don't default to the same safe move every time:
 - A brand profile's permitted claims, approved phrases, or keywords are optional raw material, not a formula. "We're allowed to say X" does NOT mean "therefore say X here." Across variants, and across this client's posts over time, most captions should NOT lean on any specific approved claim at all - what's actually shown in the creative is usually the better story.
@@ -184,6 +187,7 @@ export function buildSystemPrompt({
   parts.push(HUMAN_VOICE_GUIDANCE);
   parts.push(AD_COPY_CLICHES);
   parts.push(VOICE_TEXTURE_GUIDANCE);
+  if (allowsExclamation(profile)) parts.push(EXCLAMATION_GUIDANCE);
   parts.push(CREATIVE_VARIETY_GUIDANCE);
   if (profile) {
     parts.push(BRAND_COMPLIANCE_GUIDANCE);

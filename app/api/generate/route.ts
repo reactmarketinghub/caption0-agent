@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { generateRequestSchema, generationResponseSchema, type GenerationResponse } from "@/lib/schemas";
 import { generateStructured, imagesWithVideoLabels, GenerationTimeoutError } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
-import { validateGenerationResponse } from "@/lib/generationValidation";
+import { validateGenerationResponse, allowsExclamation } from "@/lib/generationValidation";
 import {
   getBrandProfile,
   checkAndConsumeRateLimit,
@@ -92,7 +92,10 @@ export async function POST(req: Request) {
           userText,
           images: labelledImages,
           schema: generationResponseSchema,
-          validate: (d) => validateGenerationResponse(d, postFormat, profile?.bannedWords),
+          validate: (d) =>
+            validateGenerationResponse(d, postFormat, profile?.bannedWords, {
+              requireExclamation: allowsExclamation(profile),
+            }),
           enableWebSearch: webSearch,
         }),
       ),

@@ -532,6 +532,19 @@ that block):
   surfacing the first one found. Both `/api/generate` and `/api/refine` pass
   `profile?.bannedWords` through.
 
+### Punctuation mix: at least one "!" per platform
+
+Every caption in a set ended on a full stop, which read flat. `EXCLAMATION_GUIDANCE`
+(`lib/prompts.ts`) tells Claude at least one of the 3 variants per platform must use
+an exclamation mark (never "!!", not on a serious-toned caption), and
+`validateExclamationMix()` (`lib/generationValidation.ts`) enforces it through the
+same retry-with-a-corrective-instruction path as length and banned words, so a
+batch with no "!" for a platform gets redone once. A brand profile that forbids
+exclamation marks wins: `allowsExclamation(profile)` checks its don'ts / banned
+words / emoji rules / CTA style and, when it says no, both the prompt line and the
+check are skipped. Applies to `/api/generate` only (not the single-caption refine
+buttons).
+
 ### Refine buttons: Livelier options
 
 A caption card offers Copy / Regenerate / Shorter / **Livelier**. Livelier opens
