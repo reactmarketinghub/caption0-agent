@@ -8,7 +8,7 @@ import { UploadZone, type UploadResult } from "./UploadZone";
 import { CarouselThumbnails } from "./CarouselThumbnails";
 import { ClientSelector } from "./ClientSelector";
 import { PostSettingsFields } from "./PostSettingsFields";
-import { PlatformCheckboxes } from "./PlatformCheckboxes";
+import { PlatformPicker } from "./PlatformPicker";
 import { CaptionResults } from "./CaptionResults";
 import { ALL_PLATFORM_IDS, type PlatformId } from "@/config/platforms";
 import type { PostFormat, Objective } from "@/config/objectives";
@@ -173,7 +173,7 @@ export function CaptionGenerator() {
         onObjectiveChange={setObjective}
       />
 
-      <PlatformCheckboxes selected={platforms} onChange={setPlatforms} />
+      <PlatformPicker selected={platforms} onChange={setPlatforms} />
 
       <Button
         onClick={handleGenerate}
