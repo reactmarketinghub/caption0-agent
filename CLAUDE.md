@@ -532,18 +532,20 @@ that block):
   surfacing the first one found. Both `/api/generate` and `/api/refine` pass
   `profile?.bannedWords` through.
 
-### Punctuation mix: at least one "!" per platform
+### Punctuation mix: at least one "!" per platform (unless the client forbids it)
 
-Every caption in a set ended on a full stop, which read flat. `EXCLAMATION_GUIDANCE`
-(`lib/prompts.ts`) tells Claude at least one of the 3 variants per platform must use
-an exclamation mark (never "!!", not on a serious-toned caption), and
-`validateExclamationMix()` (`lib/generationValidation.ts`) enforces it through the
-same retry-with-a-corrective-instruction path as length and banned words, so a
-batch with no "!" for a platform gets redone once. A brand profile that forbids
-exclamation marks wins: `allowsExclamation(profile)` checks its don'ts / banned
-words / emoji rules / CTA style and, when it says no, both the prompt line and the
-check are skipped. Applies to `/api/generate` only (not the single-caption refine
-buttons).
+Every caption in a set ended on a full stop, which read flat. For a client with no
+exclamation rule (or no client), `EXCLAMATION_GUIDANCE` (`lib/prompts.ts`) tells Claude
+at least one of the 3 variants per platform must use a "!" (never "!!", not on a
+serious-toned caption), and `validateExclamationMix()` (`lib/generationValidation.ts`)
+enforces it through the same retry-with-a-corrective-instruction path as length and
+banned words. If the client's profile rules out exclamation marks - `allowsExclamation()`
+reads their don'ts / emoji rules / CTA style / banned words for "exclamation ..." or a "!"
+next to a negation like no/never/avoid/don't - the logic flips: `NO_EXCLAMATION_GUIDANCE`
+goes in the prompt and `validateNoExclamation()` retries any caption containing a "!"
+(also on the `/api/refine` buttons, so Livelier can't sneak one in). The brand's rules
+always beat the house style; a false-positive match errs on the side of no "!". When
+adding to this, keep `generate` and `refine` in step (`exclamation: "require" | "forbid"`).
 
 ### Refine buttons: Livelier options
 

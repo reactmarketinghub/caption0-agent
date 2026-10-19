@@ -32,6 +32,8 @@ Illustration of the difference (different product, don't reuse the wording):
 
 const EXCLAMATION_GUIDANCE = `Punctuation mix: don't let every caption end on a full stop. For each platform, at least one of the 3 variants must use an exclamation mark - to end a line or to mark a genuinely upbeat moment - so the set doesn't read flat. One or two of the three is plenty: never "!!" or a string of them, and not on a caption whose tone is genuinely serious.`;
 
+const NO_EXCLAMATION_GUIDANCE = `This client's brand rules rule out exclamation marks. Use none, in any caption - end lines with full stops or question marks (or nothing) and get the energy from word choice instead.`;
+
 const CREATIVE_VARIETY_GUIDANCE = `Be genuinely creative - don't default to the same safe move every time:
 - A brand profile's permitted claims, approved phrases, or keywords are optional raw material, not a formula. "We're allowed to say X" does NOT mean "therefore say X here." Across variants, and across this client's posts over time, most captions should NOT lean on any specific approved claim at all - what's actually shown in the creative is usually the better story.
 - The 3 variants for a given platform must take genuinely different creative angles from each other, not the same idea reworded. Draw from distinct angle types - e.g. a direct product/claim-led angle, an emotional/lifestyle/story angle, a curiosity or question-led hook, a social-proof or community angle, a playful/observational angle, a behind-the-scenes or process angle - and use a claim-led angle in at most one variant, if any.
@@ -187,7 +189,7 @@ export function buildSystemPrompt({
   parts.push(HUMAN_VOICE_GUIDANCE);
   parts.push(AD_COPY_CLICHES);
   parts.push(VOICE_TEXTURE_GUIDANCE);
-  if (allowsExclamation(profile)) parts.push(EXCLAMATION_GUIDANCE);
+  parts.push(allowsExclamation(profile) ? EXCLAMATION_GUIDANCE : NO_EXCLAMATION_GUIDANCE);
   parts.push(CREATIVE_VARIETY_GUIDANCE);
   if (profile) {
     parts.push(BRAND_COMPLIANCE_GUIDANCE);

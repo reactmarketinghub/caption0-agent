@@ -59,9 +59,18 @@ export function combineViolations(...messages: Array<string | null>): string | n
  */
 export function allowsExclamation(profile?: BrandProfile | null): boolean {
   if (!profile) return true;
-  const rules = [...profile.donts, ...profile.bannedWords, profile.emojiRules, profile.ctaStyle];
   if (profile.bannedWords.some((w) => w.includes("!"))) return false;
-  return !rules.some((r) => /exclamation|\bno\s+!|\bnever\b[^.]*!|!\s*marks?/i.test(r));
+  const rules = [...profile.donts, profile.emojiRules, profile.ctaStyle];
+  // Either spells it out ("exclamation marks/points", "!-marks") or pairs a "!"
+  // with a negation ("no !", "never use '!'", "avoid !", "don't use !").
+  const negation = /\b(no|not|never|avoid|don'?t|do not|without|zero|ban(ned)?|forbid(den)?|stop)\b/i;
+  return !rules.some((r) => /exclamation|!\s*marks?/i.test(r) && negation.test(r) || (r.includes("!") && negation.test(r)));
+}
+
+/** For a client whose rules rule out "!": no caption may contain one (checked like a banned word). */
+export function validateNoExclamation(variant: CaptionVariant): string | null {
+  if (!variant.caption.includes("!")) return null;
+  return `This client's brand rules rule out exclamation marks, but the caption uses one. Rewrite it with no "!" anywhere (end on a full stop, a question mark or no punctuation instead), keeping the same core message.`;
 }
 
 /**
@@ -80,17 +89,19 @@ export function validateGenerationResponse(
   data: GenerationResponse,
   postFormat: PostFormat | undefined,
   bannedWords: string[] = [],
-  options: { requireExclamation?: boolean } = {},
+  options: { exclamation?: "require" | "forbid" | "ignore" } = {},
 ): string | null {
   const violations = data.platforms.flatMap((p) =>
     p.variants.flatMap((v, i) => {
-      const msgs = [validateCaptionLength(p.platform, postFormat, v), validateBannedWords(bannedWords, v)].filter(
-        (m): m is string => Boolean(m),
-      );
+      const msgs = [
+        validateCaptionLength(p.platform, postFormat, v),
+        validateBannedWords(bannedWords, v),
+        options.exclamation === "forbid" ? validateNoExclamation(v) : null,
+      ].filter((m): m is string => Boolean(m));
       return msgs.map((msg) => `Variant ${i + 1}: ${msg}`);
     }),
   );
-  const mix = options.requireExclamation ? validateExclamationMix(data) : null;
+  const mix = options.exclamation === "require" ? validateExclamationMix(data) : null;
   if (!violations.length && !mix) return null;
   const parts: string[] = [];
   if (violations.length) {

@@ -4,7 +4,13 @@ import { refineRequestSchema, captionVariantSchema, type RefineRequest } from "@
 import { LIVELIER_IDS, LIVELIER_OPTIONS } from "@/config/refinements";
 import { generateStructured, imagesWithVideoLabels, GenerationTimeoutError } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
-import { validateCaptionLength, validateBannedWords, combineViolations } from "@/lib/generationValidation";
+import {
+  validateCaptionLength,
+  validateBannedWords,
+  validateNoExclamation,
+  allowsExclamation,
+  combineViolations,
+} from "@/lib/generationValidation";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
 import { getCurrentUserEmail } from "@/lib/auth";
 import { isApiKeyProblem, API_KEY_PROBLEM_MESSAGE } from "@/lib/anthropic";
@@ -77,6 +83,7 @@ export async function POST(req: Request) {
         combineViolations(
           validateCaptionLength(platform, postFormat, d.variant),
           validateBannedWords(profile?.bannedWords ?? [], d.variant),
+          allowsExclamation(profile) ? null : validateNoExclamation(d.variant),
         ),
     });
 

@@ -94,7 +94,7 @@ export async function POST(req: Request) {
           schema: generationResponseSchema,
           validate: (d) =>
             validateGenerationResponse(d, postFormat, profile?.bannedWords, {
-              requireExclamation: allowsExclamation(profile),
+              exclamation: allowsExclamation(profile) ? "require" : "forbid",
             }),
           enableWebSearch: webSearch,
         }),
