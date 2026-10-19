@@ -41,7 +41,7 @@ components/
   CarouselThumbnails.tsx       Drag-to-reorder carousel thumbnails (dnd-kit)
   CaptionGenerator.tsx          Main page orchestrator (client component)
   PostSettingsFields.tsx        Post format / objective controls (config/objectives.ts driven)
-  PlatformCheckboxes.tsx        Network selection (Meta/TikTok/LinkedIn, config/platforms.ts driven) - see "Platform selection is network-level" below
+  PlatformPicker.tsx            Platform toggle buttons grouped by network (Meta: Instagram + Facebook, TikTok, LinkedIn; config/platforms.ts driven) - see "Platform selection" below
   CaptionResults.tsx / CaptionVariantCard.tsx    Per-platform tabs, copy/regenerate/shorter/livelier
   BrandProfileForm.tsx          Admin create/edit form, incl. "import from doc" flow
   BrandKitSection.tsx           Brand kit uploads; auto-extracts guidelines from doc-type files into the profile
@@ -362,15 +362,18 @@ one place that decides which number is "the" limit for a given
 platform/format pair - the UI, the prompt, and the post-generation
 validation below all call through it rather than each re-deriving it.
 
-**Platform selection is by network, with a per-platform choice inside it.**
-`PlatformCheckboxes.tsx` iterates `ALL_NETWORKS` ("Meta", "TikTok", "LinkedIn")
-via `NETWORK_PLATFORMS` in `config/platforms.ts`. Ticking "Meta" selects
-Instagram and Facebook together by default, then shows an Instagram / Facebook
-pair underneath so either one can be switched off (just Instagram, just
-Facebook, or both); unticking both un-ticks Meta. A network with a single
-platform (TikTok, LinkedIn) has no sub-choice. The component always hands back
-platforms in canonical `ALL_PLATFORM_IDS` order so result tabs don't reshuffle.
-A caption is generated per selected platform, each with its own style rules.
+**Platform selection: toggle buttons, grouped by network.** `PlatformPicker.tsx`
+renders every platform as a toggle button styled like the Post format / Objective
+controls (purple = on, `aria-pressed`). Each ad network from `ALL_NETWORKS` is one
+bordered group via `NETWORK_PLATFORMS` in `config/platforms.ts`: Meta is a labelled
+group holding separate Instagram and Facebook toggles (either, or both), TikTok and
+LinkedIn are single toggles. It replaced an earlier checkbox design (a "Meta"
+parent checkbox that revealed Instagram/Facebook underneath) that left an awkward
+gap; keep every choice visible rather than hiding sub-options behind a parent. The
+component always hands back platforms in canonical `ALL_PLATFORM_IDS` order so
+result tabs don't reshuffle, and shows "Pick at least one platform." when none are
+on (Generate is disabled). A caption is generated per selected platform, each with
+its own style rules.
 
 **Character limits are enforced, not just displayed.** `lib/
 generationValidation.ts` (`validateGenerationResponse` for `/api/generate`,
