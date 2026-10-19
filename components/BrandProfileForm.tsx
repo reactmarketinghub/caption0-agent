@@ -362,23 +362,28 @@ export function BrandProfileForm({ profile }: BrandProfileFormProps) {
         {uploadLog.length > 0 && (
           <ul className="space-y-1.5 rounded-lg border p-3 text-sm">
             {uploadLog.map((entry) => (
-              <li key={entry.id} className="flex items-center justify-between gap-2">
-                <span className="flex min-w-0 items-center gap-2">
-                  {entry.status === "uploading" || entry.status === "parsing" ? (
-                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
-                  ) : entry.status === "done" ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
-                  ) : (
-                    <XCircle className="h-3.5 w-3.5 shrink-0 text-red-600 dark:text-red-400" />
-                  )}
-                  <span className="truncate">{entry.name}</span>
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {entry.status === "uploading" && "Uploading..."}
-                  {entry.status === "parsing" && "Extracting..."}
-                  {entry.status === "done" && formatBytes(entry.size)}
-                  {entry.status === "error" && (entry.error ?? "Failed")}
-                </span>
+              <li key={entry.id} className="space-y-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
+                    {entry.status === "uploading" || entry.status === "parsing" ? (
+                      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
+                    ) : entry.status === "done" ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 shrink-0 text-red-600 dark:text-red-400" />
+                    )}
+                    <span className="truncate">{entry.name}</span>
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {entry.status === "uploading" && "Uploading..."}
+                    {entry.status === "parsing" && "Extracting..."}
+                    {entry.status === "done" && formatBytes(entry.size)}
+                    {entry.status === "error" && "Failed"}
+                  </span>
+                </div>
+                {entry.status === "error" && (
+                  <p className="break-words pl-5.5 text-xs text-muted-foreground">{entry.error ?? "Something went wrong."}</p>
+                )}
               </li>
             ))}
           </ul>

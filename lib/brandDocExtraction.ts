@@ -1,7 +1,7 @@
 import { brandDocParseResultSchema, type BrandDocParseResult, type BrandProfile } from "./schemas";
 import { generateStructured, GenerationTimeoutError, type ImageInput } from "./claudeGenerate";
 import { buildBrandDocParseSystemPrompt } from "./prompts";
-import { extractTextFromFile, renderPdfPagesAsImages } from "./extractDocText";
+import { extractTextFromFile, renderPdfPagesAsImages, shrinkImageIfLarge } from "./extractDocText";
 import { logBrandDocUpload } from "./kv";
 
 const MAX_DOC_CHARS = 40000;
@@ -124,10 +124,7 @@ export async function extractBrandProfileFromFiles({
       let contributed = false;
       const imageMediaType = IMAGE_MEDIA_TYPES[f.contentType];
       if (imageMediaType) {
-        images.push({
-          dataUrl: `data:${f.contentType};base64,${buffer.toString("base64")}`,
-          mediaType: imageMediaType,
-        });
+        images.push(await shrinkImageIfLarge(buffer, imageMediaType));
         contributed = true;
       } else {
         const text = await extractTextFromFile({ buffer, name: f.name, type: f.contentType });
@@ -139,11 +136,9 @@ export async function extractBrandProfileFromFiles({
           // PDF where every page is really one embedded image. Fall back to
           // rendering pages as images so Claude's vision can still read it,
           // instead of failing the file outright.
-          const pageDataUrls = await renderPdfPagesAsImages(buffer);
-          for (const dataUrl of pageDataUrls) {
-            images.push({ dataUrl, mediaType: "image/png" });
-          }
-          contributed = pageDataUrls.length > 0;
+          const pages = await renderPdfPagesAsImages(buffer);
+          for (const page of pages) images.push(page);
+          contributed = pages.length > 0;
         }
       }
 
@@ -229,20 +224,26 @@ export async function extractBrandProfileFromFiles({
   }
 }
 
-/** Plain-language reason for a failed Claude extraction step, so the upload log says what actually happened. */
+/**
+ * Plain-language reason for a failed Claude extraction step, so the upload log
+ * says what actually happened. The form adds its own "paste the text instead"
+ * hint, so these stay to the reason alone.
+ */
 function describeParseFailure(err: unknown, imageCount: number): string {
-  const manual = "You can also copy the text out of the file and paste it into the text box under the upload area.";
   if (err instanceof GenerationTimeoutError) {
     return `Reading these files took too long${
       imageCount > 3 ? " (the PDF is image-based, which is slower to read)" : ""
-    }. Try fewer or smaller files at once. ${manual}`;
+    }. Try fewer or smaller files at once.`;
   }
   const status = (err as { status?: number } | null)?.status;
-  if (status === 413 || (status === 400 && /too large|exceed|size|dimension/i.test(String((err as Error).message)))) {
-    return `Claude couldn't accept these files because they're too large. Try a smaller file or fewer files. ${manual}`;
+  const message = err instanceof Error ? err.message : String(err);
+  if (status === 413 || (status === 400 && /too large|exceed|size|dimension/i.test(message))) {
+    return "Claude couldn't accept these files because they're too large. Try a smaller file or fewer files.";
   }
   if (status === 429 || status === 529 || status === 503) {
     return "Claude is busy right now. Please try again in a minute.";
   }
-  return `We couldn't turn that into a profile. Please try again, fill the fields in manually, or: ${manual.charAt(0).toLowerCase()}${manual.slice(1)}`;
+  // Last resort: still include the technical reason (trimmed) so a repeat
+  // failure can be diagnosed from the screen or the Recent uploads log.
+  return `We couldn't turn that into a profile. Technical detail: ${message.replace(/\s+/g, " ").slice(0, 280)}`;
 }

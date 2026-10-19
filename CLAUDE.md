@@ -201,10 +201,10 @@ every page into one embedded image (a common way those tools shrink file
 size, and a common real-world way a legit brand guidelines PDF ends up with
 zero extractable text), has nothing for it to read. When that happens,
 `renderPdfPagesAsImages()` (same file) renders up to the first
-`MAX_PDF_SCREENSHOT_PAGES` (8) pages to PNGs via `pdf-parse`'s
+`MAX_PDF_SCREENSHOT_PAGES` (8) pages via `pdf-parse`'s
 `getScreenshot()` instead, and those get pushed into the same `images` array
-real screenshot uploads already use - no new dependency, `pdf-parse` ships
-`@napi-rs/canvas` for this already. **Caveat for anyone touching this:**
+real screenshot uploads already use (`@napi-rs/canvas`, which `pdf-parse`
+already needs, is now also an explicit dependency). **Caveat for anyone touching this:**
 `pdf-parse`'s `getText()` has a parameter-mutation quirk where, unless you
 explicitly pass `pageJoiner: ""`, it silently injects a
 `"-- page N of M --"` marker into every page's text - including a
@@ -249,6 +249,21 @@ contributes no text/images is now logged as its own per-file error with a
 specific reason, and the batch-level error appends every file's actual
 `name: reason` instead of staying generic - this is what actually explains
 "why" to someone staring at a failed upload, instead of a dead end.
+
+**Images sent to Claude are shrunk first - never send raw page renders.** A
+photo-heavy campaign deck rendered as PNG came out ~10MB per page (~80MB for 8
+pages in a test) against Claude's 5MB-per-image / ~32MB-per-request limits;
+that was a major cause of repeat "We couldn't turn that into a profile"
+failures and slow reads. `renderPdfPagesAsImages()` now renders at 1280px wide,
+re-encodes as JPEG, and stops adding pages past a 12MB total budget (same deck:
+80MB -> 3.7MB, half the time); `shrinkImageIfLarge()` downsizes any directly
+uploaded image over 1.5MB to a 1568px JPEG. Both live in
+`lib/extractDocText.ts`. `parseJsonLoose()` (`lib/claudeGenerate.ts`) also now
+digs a JSON object out of prose/fenced replies, and when Claude's answer is
+still unusable the thrown error includes the stop reason and the start of the
+reply; `describeParseFailure()` shows that as "Technical detail: ..." so a
+repeat failure can be diagnosed from the screen/Recent uploads log rather than
+guessed at.
 
 **The extraction result schema is intentionally lenient.** An import once
 failed with the generic `"We couldn't turn that into a profile"` even though

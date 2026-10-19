@@ -126,11 +126,31 @@ function extractText(message: Anthropic.Message): string {
   return textBlocks.length ? textBlocks[textBlocks.length - 1].text : "";
 }
 
-function parseJsonLoose(text: string): unknown {
+/**
+ * Pulls a JSON object out of Claude's reply. Tolerates the usual deviations
+ * from "strict JSON only": markdown fences, and a sentence of prose before or
+ * after the object (e.g. "This looks like a campaign deck, here's what I
+ * found: {...}") - which used to fail the whole call even though the data was
+ * right there.
+ */
+export function parseJsonLoose(text: string): unknown {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced ? fenced[1] : trimmed;
-  return JSON.parse(candidate);
+  const candidate = fenced ? fenced[1].trim() : trimmed;
+  try {
+    return JSON.parse(candidate);
+  } catch (err) {
+    const start = candidate.indexOf("{");
+    const end = candidate.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(candidate.slice(start, end + 1));
+      } catch {
+        // fall through to the original error
+      }
+    }
+    throw err;
+  }
 }
 
 /**
@@ -154,6 +174,8 @@ export async function generateStructured<T>({
   ];
 
   let lastError: unknown = null;
+  let lastStopReason: string | null = null;
+  let lastReplySnippet = "";
   let retrySuffixReason: string | undefined;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
@@ -204,8 +226,11 @@ export async function generateStructured<T>({
       }),
     );
 
+    const replyText = extractText(message);
+    lastStopReason = message.stop_reason;
+    lastReplySnippet = replyText.trim().slice(0, 160);
     try {
-      const parsed = parseJsonLoose(extractText(message));
+      const parsed = parseJsonLoose(replyText);
       const validated = schema.parse(parsed);
 
       const validationError = validate?.(validated) ?? null;
@@ -225,9 +250,11 @@ export async function generateStructured<T>({
     }
   }
 
+  // Say what actually came back - a bare "invalid JSON" gave nobody (including
+  // whoever reads the Vercel logs) anything to act on.
   throw new Error(
-    `Claude did not return valid JSON after retry: ${
-      lastError instanceof Error ? lastError.message : String(lastError)
-    }`,
+    `Claude did not return usable JSON after retry (stop_reason: ${lastStopReason ?? "unknown"}; ${
+      lastError instanceof Error ? lastError.message.slice(0, 200) : String(lastError)
+    }; reply began: "${lastReplySnippet}")`,
   );
 }
