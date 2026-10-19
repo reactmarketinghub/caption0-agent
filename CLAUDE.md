@@ -42,7 +42,7 @@ components/
   CaptionGenerator.tsx          Main page orchestrator (client component)
   PostSettingsFields.tsx        Post format / objective controls (config/objectives.ts driven)
   PlatformCheckboxes.tsx        Network selection (Meta/TikTok/LinkedIn, config/platforms.ts driven) - see "Platform selection is network-level" below
-  CaptionResults.tsx / CaptionVariantCard.tsx    Per-platform tabs, copy/regenerate/shorter/punchier
+  CaptionResults.tsx / CaptionVariantCard.tsx    Per-platform tabs, copy/regenerate/shorter/livelier
   BrandProfileForm.tsx          Admin create/edit form, incl. "import from doc" flow
   BrandKitSection.tsx           Brand kit uploads; auto-extracts guidelines from doc-type files into the profile
 
@@ -362,14 +362,15 @@ one place that decides which number is "the" limit for a given
 platform/format pair - the UI, the prompt, and the post-generation
 validation below all call through it rather than each re-deriving it.
 
-**Platform selection is network-level, not per-platform.** The checkboxes
-in `PlatformCheckboxes.tsx` iterate `ALL_NETWORKS` ("Meta", "TikTok",
-"LinkedIn") via `NETWORK_PLATFORMS` in `config/platforms.ts`, not
-`ALL_PLATFORM_IDS` - checking "Meta" always selects Instagram *and*
-Facebook together (you can't pick one without the other), since that's how
-ad ops actually thinks about a Meta post. A caption is still generated per
-individual platform under the hood (each with its own style rules), this
-only changes the selection granularity in the UI.
+**Platform selection is by network, with a per-platform choice inside it.**
+`PlatformCheckboxes.tsx` iterates `ALL_NETWORKS` ("Meta", "TikTok", "LinkedIn")
+via `NETWORK_PLATFORMS` in `config/platforms.ts`. Ticking "Meta" selects
+Instagram and Facebook together by default, then shows an Instagram / Facebook
+pair underneath so either one can be switched off (just Instagram, just
+Facebook, or both); unticking both un-ticks Meta. A network with a single
+platform (TikTok, LinkedIn) has no sub-choice. The component always hands back
+platforms in canonical `ALL_PLATFORM_IDS` order so result tabs don't reshuffle.
+A caption is generated per selected platform, each with its own style rules.
 
 **Character limits are enforced, not just displayed.** `lib/
 generationValidation.ts` (`validateGenerationResponse` for `/api/generate`,
@@ -528,6 +529,15 @@ that block):
   length *and* a banned word) into one retry instruction instead of only
   surfacing the first one found. Both `/api/generate` and `/api/refine` pass
   `profile?.bannedWords` through.
+
+### Refine buttons: Livelier options
+
+A caption card offers Copy / Regenerate / Shorter / **Livelier**. Livelier opens
+an inline row of options (More playful, More energetic, More chatty, Funnier,
+Bolder) defined in `config/refinements.ts` - edit that file to reword or add
+one (add the id to `LIVELIER_IDS` and an entry in `LIVELIER_OPTIONS`; the
+refine schema, route and card all read from it). Each option sends its id as
+the `/api/refine` `instruction`; the old single "Punchier" button is gone.
 
 ### Concrete anti-ad-copy rules (added after "still sounds weird" feedback)
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { refineRequestSchema, captionVariantSchema } from "@/lib/schemas";
+import { refineRequestSchema, captionVariantSchema, type RefineRequest } from "@/lib/schemas";
+import { LIVELIER_IDS, LIVELIER_OPTIONS } from "@/config/refinements";
 import { generateStructured, imagesWithVideoLabels, GenerationTimeoutError } from "@/lib/claudeGenerate";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { validateCaptionLength, validateBannedWords, combineViolations } from "@/lib/generationValidation";
@@ -12,11 +13,11 @@ export const maxDuration = 60;
 
 const refineResponseSchema = z.object({ variant: captionVariantSchema });
 
-const INSTRUCTION_TEXT: Record<string, string> = {
+const INSTRUCTION_TEXT: Record<RefineRequest["instruction"], string> = {
   regenerate: "Write a fresh alternative caption for this same platform and creative - a different angle, not a minor tweak.",
-  shorter: "Rewrite this caption to be noticeably shorter and punchier while keeping the same core message and CTA.",
-  punchier: "Rewrite this caption with a punchier hook and more energetic tone, keeping it accurate to the creative and the same core message.",
-};
+  shorter: "Rewrite this caption to be noticeably shorter while keeping the same core message and CTA.",
+  ...Object.fromEntries(LIVELIER_IDS.map((id) => [id, LIVELIER_OPTIONS[id].instruction])),
+} as Record<RefineRequest["instruction"], string>;
 
 export async function POST(req: Request) {
   let userEmail: string;

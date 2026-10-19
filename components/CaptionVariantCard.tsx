@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, RefreshCw, Scissors, Zap, Loader2 } from "lucide-react";
+import { Copy, Check, RefreshCw, Scissors, Zap, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LIVELIER_IDS, LIVELIER_OPTIONS } from "@/config/refinements";
 import { PLATFORM_RULES, getEffectiveCharLimit, type PlatformId } from "@/config/platforms";
 import type { CaptionVariant, RefineRequest } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ export function CaptionVariantCard({
   const [copied, setCopied] = useState(false);
   const [busyAction, setBusyAction] = useState<RefineRequest["instruction"] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [livelierOpen, setLivelierOpen] = useState(false);
   const rules = PLATFORM_RULES[platform];
   const isDarkPost = refineContext.postFormat === "dark-post";
 
@@ -42,6 +44,7 @@ export function CaptionVariantCard({
   }
 
   async function handleAction(instruction: RefineRequest["instruction"]) {
+    setLivelierOpen(false);
     setBusyAction(instruction);
     setError(null);
     try {
@@ -117,16 +120,34 @@ export function CaptionVariantCard({
           size="sm"
           variant="outline"
           disabled={busyAction !== null}
-          onClick={() => handleAction("punchier")}
+          aria-expanded={livelierOpen}
+          onClick={() => setLivelierOpen((open) => !open)}
         >
-          {busyAction === "punchier" ? (
+          {busyAction && (LIVELIER_IDS as readonly string[]).includes(busyAction) ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <Zap className="h-3.5 w-3.5" />
           )}
-          Punchier
+          Livelier
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", livelierOpen && "rotate-180")} />
         </Button>
       </div>
+      {livelierOpen && (
+        <div className="flex flex-wrap gap-2 rounded-md bg-muted/50 p-2">
+          <span className="w-full text-xs text-muted-foreground">Make it...</span>
+          {LIVELIER_IDS.map((id) => (
+            <Button
+              key={id}
+              size="sm"
+              variant="secondary"
+              disabled={busyAction !== null}
+              onClick={() => handleAction(id)}
+            >
+              {LIVELIER_OPTIONS[id].label}
+            </Button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
