@@ -1,5 +1,5 @@
 import { brandDocParseResultSchema, type BrandDocParseResult, type BrandProfile } from "./schemas";
-import { generateStructured, type ImageInput } from "./claudeGenerate";
+import { generateStructured, GenerationTimeoutError, type ImageInput } from "./claudeGenerate";
 import { buildBrandDocParseSystemPrompt } from "./prompts";
 import { extractTextFromFile, renderPdfPagesAsImages } from "./extractDocText";
 import { logBrandDocUpload } from "./kv";
@@ -97,6 +97,7 @@ export async function extractBrandProfileFromFiles({
   userEmail: string;
   clientName?: string;
 }): Promise<{ data: BrandDocParseResult; outcomes: FileOutcome[] }> {
+  const startedAt = Date.now();
   const trimmedPaste = pastedText?.trim() ?? "";
 
   if (!files.length && !trimmedPaste) {
@@ -207,20 +208,41 @@ export async function extractBrandProfileFromFiles({
     : `Brand voice document contents:\n"""\n${combinedText}\n"""\n\nExtract the brand profile fields now.`;
 
   try {
+    // The route's hard limit is 60s and downloading/reading/rendering the
+    // files already used some of it - give Claude whatever is left, so a slow
+    // run fails with a clear message instead of being killed by Vercel.
     const { data } = await generateStructured({
       system: buildBrandDocParseSystemPrompt(),
       userText,
       images,
       schema: brandDocParseResultSchema,
+      effort: "low",
+      timeBudgetMs: Math.max(15_000, 52_000 - (Date.now() - startedAt)),
     });
     await flushLogs();
     return { data, outcomes };
   } catch (err) {
     console.error("Brand doc parse failed:", err);
-    await flushLogs("Claude couldn't extract a profile from this.");
-    throw new BrandDocExtractionError(
-      "We couldn't turn that into a profile. Please try again or fill the fields in manually.",
-      502,
-    );
+    const reason = describeParseFailure(err, images.length);
+    await flushLogs(reason);
+    throw new BrandDocExtractionError(reason, err instanceof GenerationTimeoutError ? 504 : 502);
   }
+}
+
+/** Plain-language reason for a failed Claude extraction step, so the upload log says what actually happened. */
+function describeParseFailure(err: unknown, imageCount: number): string {
+  const manual = "You can also copy the text out of the file and paste it into the text box under the upload area.";
+  if (err instanceof GenerationTimeoutError) {
+    return `Reading these files took too long${
+      imageCount > 3 ? " (the PDF is image-based, which is slower to read)" : ""
+    }. Try fewer or smaller files at once. ${manual}`;
+  }
+  const status = (err as { status?: number } | null)?.status;
+  if (status === 413 || (status === 400 && /too large|exceed|size|dimension/i.test(String((err as Error).message)))) {
+    return `Claude couldn't accept these files because they're too large. Try a smaller file or fewer files. ${manual}`;
+  }
+  if (status === 429 || status === 529 || status === 503) {
+    return "Claude is busy right now. Please try again in a minute.";
+  }
+  return `We couldn't turn that into a profile. Please try again, fill the fields in manually, or: ${manual.charAt(0).toLowerCase()}${manual.slice(1)}`;
 }

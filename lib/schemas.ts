@@ -47,9 +47,29 @@ export const brandProfileInputSchema = brandProfileSchema.omit({
 export type BrandProfileInput = z.infer<typeof brandProfileInputSchema>;
 
 /** What Claude extracts from an uploaded/pasted brand voice doc, for the admin to review before saving. */
-export const brandDocParseResultSchema = brandProfileInputSchema.omit({
-  clientName: true,
-  isDraft: true,
+// Deliberately lenient (unlike brandProfileSchema): a campaign deck or
+// partial brief often has no tone of voice, a missing list, or more than 10
+// example captions, and Claude may answer with null/empty for those. Failing
+// the whole import over that made uploads error out with a generic message;
+// instead coerce to empty/trimmed values and let the admin fill the gaps in
+// the review step (saving still requires a tone via brandProfileInputSchema).
+const lenientString = z.preprocess((v) => (typeof v === "string" ? v : ""), z.string());
+const lenientStringList = z.preprocess(
+  (v) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []),
+  z.array(z.string()),
+);
+export const brandDocParseResultSchema = z.object({
+  toneOfVoice: lenientString,
+  dos: lenientStringList,
+  donts: lenientStringList,
+  bannedWords: lenientStringList,
+  keywords: lenientStringList,
+  emojiRules: lenientString,
+  ctaStyle: lenientString,
+  exampleCaptions: z.preprocess(
+    (v) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, 10) : []),
+    z.array(z.string()),
+  ),
 });
 export type BrandDocParseResult = z.infer<typeof brandDocParseResultSchema>;
 

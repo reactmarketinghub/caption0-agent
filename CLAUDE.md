@@ -250,6 +250,20 @@ specific reason, and the batch-level error appends every file's actual
 `name: reason` instead of staying generic - this is what actually explains
 "why" to someone staring at a failed upload, instead of a dead end.
 
+**The extraction result schema is intentionally lenient.** An import once
+failed with the generic `"We couldn't turn that into a profile"` even though
+the file was read fine: `brandDocParseResultSchema` was derived from the
+strict profile schema, so a campaign deck with no tone of voice
+(`toneOfVoice` min 1), a `null` list/text field, or more than 10 example
+captions failed zod validation twice and threw. It's now its own lenient
+schema in `lib/schemas.ts` (nulls/missing -> empty, captions trimmed to 10);
+the admin fills gaps in the review step and saving still requires a tone. The
+Claude step also uses `effort: "low"`, a time budget of what's left of the
+route's 60s, and `describeParseFailure()` (`lib/brandDocExtraction.ts`) turns
+timeouts / too-large / busy errors into specific messages that are also
+written to the "Recent uploads" log - the generic message is only the last
+resort. Don't derive extraction schemas from the strict save schemas.
+
 Every file's read/extract outcome (success or error, filename, timestamp,
 who uploaded it, and the client name typed in the form at the time, if any)
 is persisted to KV via `logBrandDocUpload()`/`listBrandDocLogs()` in

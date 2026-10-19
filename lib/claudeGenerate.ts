@@ -51,6 +51,8 @@ export interface GenerateStructuredArgs<T> {
   enableWebSearch?: boolean;
   /** Total time budget across all attempts; defaults to DEFAULT_TIME_BUDGET_MS. */
   timeBudgetMs?: number;
+  /** How hard Claude thinks; defaults to GENERATION_EFFORT. Simple extraction jobs can use "low". */
+  effort?: "low" | "medium" | "high";
 }
 
 /**
@@ -143,6 +145,7 @@ export async function generateStructured<T>({
   validate,
   enableWebSearch,
   timeBudgetMs = DEFAULT_TIME_BUDGET_MS,
+  effort = GENERATION_EFFORT,
 }: GenerateStructuredArgs<T>): Promise<GenerateStructuredResult<T>> {
   const client = getAnthropicClient();
   const content: Anthropic.ContentBlockParam[] = [
@@ -174,7 +177,7 @@ export async function generateStructured<T>({
           max_tokens: MAX_OUTPUT_TOKENS,
           system: systemPrompt,
           messages: [{ role: "user", content }],
-          output_config: { effort: GENERATION_EFFORT },
+          output_config: { effort },
           ...(enableWebSearch ? { tools: [WEB_SEARCH_TOOL] } : {}),
         },
         { signal },
