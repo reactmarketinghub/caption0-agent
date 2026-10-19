@@ -3,8 +3,19 @@ import Image from "next/image";
 import { auth, signOut, isAuthConfigured } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
+// Which build is this page running? Vercel gives every deployment its own
+// permanent URL, so an old preview link keeps serving old code forever - this
+// label makes that obvious at a glance (and "preview" vs "production" too).
+// Only set on Vercel; hidden locally.
+function buildLabel(): string | null {
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
+  if (!sha) return null;
+  return `${sha} · ${process.env.VERCEL_ENV ?? "unknown"}`;
+}
+
 export async function AppHeader() {
   const session = isAuthConfigured() ? await auth() : null;
+  const label = buildLabel();
 
   return (
     <header className="flex items-center justify-between border-b bg-card px-4 py-3">
@@ -34,6 +45,14 @@ export async function AppHeader() {
             Clients
           </Link>
         </nav>
+        {label && (
+          <span
+            className="hidden text-xs text-muted-foreground/70 md:inline"
+            title="The version of the app this page is running"
+          >
+            v {label}
+          </span>
+        )}
       </div>
       {session?.user && (
         <form

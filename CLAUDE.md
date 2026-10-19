@@ -554,6 +554,17 @@ Each attempt logs one JSON line (`evt`, `attempt`, `elapsedMs`, `stopReason`,
 `outputTokens`, `webSearches`) to the Vercel function logs - check those first
 when generation is slow or failing.
 
+## Every Vercel deployment keeps its own permanent URL
+
+An "it's still broken" report turned out to be an old preview link
+(`caption0-agent-<hash>-<team>.vercel.app`): each deployment is immutable, so
+that URL serves the code from when it was built, forever, no matter what was
+pushed since. Only the Production Branch's deploys update the main domain;
+every other branch builds as a Preview with its own URL. `AppHeader` shows a
+small `v <sha> · production|preview` label (from `VERCEL_GIT_COMMIT_SHA` /
+`VERCEL_ENV`, hidden locally) so anyone can see which build they're on - when
+debugging a "still broken" report, compare that sha to `git log` first.
+
 ## Hashtags are not generated - this is intentional, by request
 
 At the team's request, this app does not generate or display hashtags
