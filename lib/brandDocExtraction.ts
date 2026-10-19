@@ -3,6 +3,7 @@ import { generateStructured, GenerationTimeoutError, type ImageInput } from "./c
 import { buildBrandDocParseSystemPrompt } from "./prompts";
 import { extractTextFromFile, renderPdfPagesAsImages, shrinkImageIfLarge } from "./extractDocText";
 import { logBrandDocUpload } from "./kv";
+import { isApiKeyProblem, API_KEY_PROBLEM_MESSAGE } from "./anthropic";
 
 const MAX_DOC_CHARS = 40000;
 
@@ -220,7 +221,10 @@ export async function extractBrandProfileFromFiles({
     console.error("Brand doc parse failed:", err);
     const reason = describeParseFailure(err, images.length);
     await flushLogs(reason);
-    throw new BrandDocExtractionError(reason, err instanceof GenerationTimeoutError ? 504 : 502);
+    throw new BrandDocExtractionError(
+      reason,
+      err instanceof GenerationTimeoutError ? 504 : isApiKeyProblem(err) ? 503 : 502,
+    );
   }
 }
 
@@ -230,6 +234,7 @@ export async function extractBrandProfileFromFiles({
  * hint, so these stay to the reason alone.
  */
 function describeParseFailure(err: unknown, imageCount: number): string {
+  if (isApiKeyProblem(err)) return API_KEY_PROBLEM_MESSAGE;
   if (err instanceof GenerationTimeoutError) {
     return `Reading these files took too long${
       imageCount > 3 ? " (the PDF is image-based, which is slower to read)" : ""

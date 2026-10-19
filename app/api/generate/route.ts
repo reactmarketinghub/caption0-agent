@@ -11,6 +11,7 @@ import {
   logCaptionAngles,
 } from "@/lib/kv";
 import { getCurrentUserEmail } from "@/lib/auth";
+import { isApiKeyProblem, API_KEY_PROBLEM_MESSAGE } from "@/lib/anthropic";
 
 // Vision + multi-platform generation (plus a possible retry) can take a
 // while; without this, Vercel's default function timeout can kill the
@@ -105,6 +106,9 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
   } catch (err) {
     console.error("Generation failed:", err);
+    if (isApiKeyProblem(err)) {
+      return NextResponse.json({ error: API_KEY_PROBLEM_MESSAGE }, { status: 503 });
+    }
     if (err instanceof GenerationTimeoutError) {
       return NextResponse.json(
         { error: "That took too long to generate. Please click Generate again - it usually works on a second try." },

@@ -569,6 +569,20 @@ Each attempt logs one JSON line (`evt`, `attempt`, `elapsedMs`, `stopReason`,
 `outputTokens`, `webSearches`) to the Vercel function logs - check those first
 when generation is slow or failing.
 
+## "401 invalid x-api-key" is a server setting, not a code bug
+
+Uploads/generation once failed everywhere with `401 authentication_error:
+invalid x-api-key` (surfaced via the "Technical detail" text). That means the
+`ANTHROPIC_API_KEY` env var on Vercel is wrong, revoked, or was pasted badly -
+no code change fixes it; an admin has to set a valid key in Vercel (Settings >
+Environment Variables, applied to Production AND Preview) and redeploy (env
+vars only apply to new deployments). The code now helps: `cleanApiKey()`
+(`lib/anthropic.ts`) strips whitespace/quotes/a pasted `ANTHROPIC_API_KEY=`
+prefix, `isApiKeyProblem()` + `API_KEY_PROBLEM_MESSAGE` turn a 401/403 into a
+plain "ask an admin to update the key" message on generate, refine and
+brand-doc import, and `/api/debug/env-check` reports whether the key looks
+right (`sk-ant-` prefix, stray whitespace/quotes) without revealing it.
+
 ## Every Vercel deployment keeps its own permanent URL
 
 An "it's still broken" report turned out to be an old preview link

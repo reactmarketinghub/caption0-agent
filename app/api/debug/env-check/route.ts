@@ -15,6 +15,9 @@ export async function GET() {
   return NextResponse.json({
     hasAnthropicKey: Boolean(process.env.ANTHROPIC_API_KEY),
     anthropicKeyLength: process.env.ANTHROPIC_API_KEY?.length ?? 0,
+    // Shape only (never the key): the usual ways a pasted key goes wrong.
+    anthropicKeyLooksRight: (process.env.ANTHROPIC_API_KEY ?? "").startsWith("sk-ant-"),
+    anthropicKeyHasWhitespaceOrQuotes: /^\s|\s$|^["']|["']$/.test(process.env.ANTHROPIC_API_KEY ?? ""),
     hasAuthSecret: Boolean(process.env.AUTH_SECRET),
     hasAuthGoogleId: Boolean(process.env.AUTH_GOOGLE_ID),
     kvConfigured: kvConfigured(),

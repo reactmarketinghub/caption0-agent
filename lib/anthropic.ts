@@ -22,11 +22,25 @@ export const GENERATION_EFFORT = "medium" as const;
 
 let client: Anthropic | null = null;
 
+/**
+ * A key pasted into Vercel's env var form often arrives with a trailing
+ * newline/space, wrapping quotes, or the "ANTHROPIC_API_KEY=" prefix still
+ * attached - all of which Anthropic rejects as "invalid x-api-key" even though
+ * the key itself is fine. Strip those rather than fail.
+ */
+export function cleanApiKey(raw: string | undefined): string {
+  return (raw ?? "")
+    .trim()
+    .replace(/^ANTHROPIC_API_KEY\s*=\s*/i, "")
+    .replace(/^["']|["']$/g, "")
+    .trim();
+}
+
 /** Lazily-constructed singleton; throws a clear error if the server env var is missing. */
 export function getAnthropicClient(): Anthropic {
   if (client) return client;
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = cleanApiKey(process.env.ANTHROPIC_API_KEY);
   if (!apiKey) {
     throw new Error(
       "ANTHROPIC_API_KEY is not set. Add it to your environment (see .env.example).",
@@ -35,4 +49,15 @@ export function getAnthropicClient(): Anthropic {
 
   client = new Anthropic({ apiKey });
   return client;
+}
+
+/** Shown when Anthropic rejects the server's key - nothing a user can fix from the page, so say who can. */
+export const API_KEY_PROBLEM_MESSAGE =
+  "The AI service rejected this app's API key, so nothing can be generated right now. An admin needs to put a valid key in the ANTHROPIC_API_KEY setting in Vercel (Settings > Environment Variables) and redeploy.";
+
+/** True when the error means "the API key is missing or was rejected" (401/403 from Anthropic, or no key set). */
+export function isApiKeyProblem(err: unknown): boolean {
+  const status = (err as { status?: number } | null)?.status;
+  if (status === 401 || status === 403) return true;
+  return err instanceof Error && err.message.startsWith("ANTHROPIC_API_KEY is not set");
 }

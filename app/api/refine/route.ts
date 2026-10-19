@@ -6,6 +6,7 @@ import { buildSystemPrompt } from "@/lib/prompts";
 import { validateCaptionLength, validateBannedWords, combineViolations } from "@/lib/generationValidation";
 import { getBrandProfile, checkAndConsumeRateLimit, logGeneration } from "@/lib/kv";
 import { getCurrentUserEmail } from "@/lib/auth";
+import { isApiKeyProblem, API_KEY_PROBLEM_MESSAGE } from "@/lib/anthropic";
 
 export const maxDuration = 60;
 
@@ -92,6 +93,9 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
   } catch (err) {
     console.error("Refine failed:", err);
+    if (isApiKeyProblem(err)) {
+      return NextResponse.json({ error: API_KEY_PROBLEM_MESSAGE }, { status: 503 });
+    }
     if (err instanceof GenerationTimeoutError) {
       return NextResponse.json(
         { error: "That took too long. Please try again." },
