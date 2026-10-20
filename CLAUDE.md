@@ -664,6 +664,41 @@ deliberate, user-controlled feature (not just "always on" like before),
 treat that as new scope - re-add a schema field and UI control rather than
 assuming the old `hashtagRules`/`maxHashtags` shape is still the right one.
 
+## Testing, and the daily checkup routine
+
+Three commands, cheapest first:
+
+- `npm run check` - `next typegen && tsc --noEmit`, eslint, then `npm run selftest`.
+  Offline, no API key. (`next typegen` is needed on a fresh checkout or `tsc` fails on
+  Next's generated `LayoutProps` types.)
+- `npm run selftest` (`scripts/selftest.ts`, run with `tsx`) - plain `node:assert`
+  tests of the rules the team asked for and bugs that shipped once: exclamation rule
+  both ways, character limits and banned words, `parseJsonLoose`, the lenient brand
+  import schema, optional tone, Tone options, prompt guardrails, API-key cleanup,
+  video frame budgeting, image media types. **When you add a standing rule or fix a
+  bug, add a test for it here.**
+- `npm run smoke` (`scripts/smoke-live.mjs`) - hits the *deployed* site
+  (`BASE_URL` overrides, default `https://caption0-agent.vercel.app`): home page,
+  client list, a text brand import and a one-platform caption generation with a tiny
+  JPEG. Two tiny real Claude calls (a fraction of a cent). It labels failures that
+  are deployment settings (rejected API key, login required) separately from code
+  failures. Exit code 1 = something is broken.
+
+A scheduled Claude Code routine ("Daily caption app checkup", 07:52 London - the
+offset keeps it clear of the top-of-hour rush so results are ready by 8) starts a
+fresh cloud session every morning, runs `npm run check`, `npm run build` and
+`npm run smoke`, reads recent changes for bugs, and - if it finds one - fixes it on a
+branch named `claude/daily-checkup-<date>` and opens a pull request into the
+default branch for a human to approve. It never pushes to the default (= production)
+branch itself and never edits secrets or Vercel settings. If the smoke test fails
+because of a deployment setting, it reports that instead of changing code. Edit or
+pause it from the Routines list in Claude Code.
+
+A bug the smoke test found on its first run: the server labelled every image as
+JPEG, so a PNG was rejected by Claude with a 502 (the app itself only ever sends
+JPEG, so no user saw it). `mediaTypeFromDataUrl()` (`lib/client/creativeAsset.ts`)
+now reads the type from the data URL.
+
 ## Local development
 
 ```bash

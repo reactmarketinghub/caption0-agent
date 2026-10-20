@@ -2,7 +2,7 @@ import type { z } from "zod";
 import type Anthropic from "@anthropic-ai/sdk";
 import { getAnthropicClient, CLAUDE_MODEL, MAX_OUTPUT_TOKENS, GENERATION_EFFORT } from "./anthropic";
 import { buildRetrySystemSuffix } from "./prompts";
-import { dataUrlToBase64 } from "./client/creativeAsset";
+import { dataUrlToBase64, mediaTypeFromDataUrl } from "./client/creativeAsset";
 
 /**
  * Thrown when a generation runs out of its time budget. The routes turn this
@@ -103,7 +103,7 @@ function imagesToBlocks(images: ImageInput[]): Anthropic.ContentBlockParam[] {
       type: "image",
       source: {
         type: "base64",
-        media_type: img.mediaType ?? "image/jpeg",
+        media_type: img.mediaType ?? mediaTypeFromDataUrl(img.dataUrl),
         data: dataUrlToBase64(img.dataUrl),
       },
     });

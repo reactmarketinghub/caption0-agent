@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build && node scripts/check-pdf-trace.mjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "selftest": "tsx scripts/selftest.ts",
+    "check": "npm run typecheck && npm run lint && npm run selftest",
+    "smoke": "node scripts/smoke-live.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",
@@ -41,6 +45,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
