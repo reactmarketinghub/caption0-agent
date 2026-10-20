@@ -691,8 +691,11 @@ fresh cloud session every morning, runs `npm run check`, `npm run build` and
 branch named `claude/daily-checkup-<date>` and opens a pull request into the
 default branch for a human to approve. It never pushes to the default (= production)
 branch itself and never edits secrets or Vercel settings. If the smoke test fails
-because of a deployment setting, it reports that instead of changing code. Edit or
-pause it from the Routines list in Claude Code.
+because of a deployment setting, it reports that instead of changing code. The routine runs in Anthropic's cloud, so it works while nobody has Claude or a laptop open.
+Its session starts *without* the repo attached (the routine has no repo source and no GitHub
+connector), so its prompt tells it to attach the repo with `add_repo` first and to open the
+pull request with `gh api` if no GitHub tools exist. Edit or pause it from the Routines list
+in Claude Code (it is named "Daily caption app checkup").
 
 A bug the smoke test found on its first run: the server labelled every image as
 JPEG, so a PNG was rejected by Claude with a 502 (the app itself only ever sends
